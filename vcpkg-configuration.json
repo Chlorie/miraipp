@@ -1,0 +1,9 @@
+{
+    "registries": [
+        {
+            "kind": "directory",
+            "path": "../vcpkg-ports/ports",
+            "packages": ["clu"]
+        }
+    ]
+}
