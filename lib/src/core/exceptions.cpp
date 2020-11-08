@@ -1,4 +1,4 @@
-#include "mirai/core/mirai_exception.h"
+#include "mirai/core/exceptions.h"
 
 namespace mpp
 {

@@ -16,23 +16,21 @@ namespace mpp::detail
     using error_code = boost::system::error_code;
     using endpoints = tcp::resolver::results_type;
     using time_point = std::chrono::steady_clock::time_point;
+    using request = http::request<http::string_body>;
+    using response = http::response<http::string_body>;
 
     inline void throw_on_error(const error_code ec) { if (ec) throw boost::system::system_error(ec); }
 
     class [[nodiscard]] HttpRequestAwaitable final
     {
-    public:
-        using Request = http::request<http::string_body>;
-        using Response = http::response<http::dynamic_body>;
-
     private:
         const endpoints& endpoints_;
         beast::tcp_stream stream_;
         beast::flat_buffer buffer_;
-        Request request_;
+        request request_;
         error_code ec_;
-        Response response_;
-        std::coroutine_handle<> handle_;
+        response response_;
+        std::coroutine_handle<> handle_{};
 
         void resume_with_error(error_code ec);
         void on_connect(error_code ec, const tcp::endpoint&);
@@ -40,12 +38,12 @@ namespace mpp::detail
         void on_read(error_code ec, size_t);
 
     public:
-        explicit HttpRequestAwaitable(asio::io_context& ctx, const endpoints& eps, Request&& req):
+        explicit HttpRequestAwaitable(asio::io_context& ctx, const endpoints& eps, request&& req):
             endpoints_(eps), stream_(ctx), request_(std::move(req)) {}
 
         bool await_ready() const noexcept { return false; }
         void await_suspend(std::coroutine_handle<> handle);
-        Response await_resume();
+        response await_resume();
     };
 
     class [[nodiscard]] WaitUntilAwaitable final
@@ -70,11 +68,14 @@ namespace mpp::detail
         std::string host_;
         endpoints endpoints_;
 
+        request generate_json_post_req(std::string_view target, std::string&& body) const;
+
     public:
         NetClient(std::string_view host, std::string_view port);
 
         HttpRequestAwaitable async_get(std::string_view target);
-        HttpRequestAwaitable async_post(std::string_view target, std::string body);
+        HttpRequestAwaitable async_post_json(std::string_view target, std::string&& body);
+        response post_json(std::string_view target, std::string&& body);
         WaitUntilAwaitable async_wait(const time_point tp) { return WaitUntilAwaitable(io_ctx_, tp); }
 
         void run() { io_ctx_.run(); }

@@ -1,30 +1,26 @@
-#include <iostream>
+#include <fmt/core.h>
 #include <mirai/core/bot.h>
+#include <mirai/message/message.h>
 
+using namespace mpp::literals;
 using namespace std::literals;
 
-clu::task<void> log_on_error(clu::task<void> task)
+clu::task<> test(mpp::Bot& bot)
 {
-    try { co_await task; }
-    catch (const std::exception& exc) { std::cerr << exc.what() << '\n'; }
-}
-
-clu::task<void> get_test(mpp::detail::NetClient& client)
-{
-    const auto response = co_await client.async_get("/about");
-    std::cout << response;
-    for (size_t i = 0; i < 5; i++)
-    {
-        co_await client.async_wait(std::chrono::steady_clock::now() + 500ms);
-        std::cout << "\n500ms later\n";
-    }
+    const auto ver = co_await bot.async_get_version();
+    fmt::print("mirai-api-http version: {}\n", ver);
+    co_await bot.async_auth("somerandomauthkeyformybot", 3378448768_uid);
+    fmt::print("会话认证上了.jpg\n");
+    const auto start_time = std::chrono::steady_clock::now();
+    const auto msgid = co_await bot.async_send_message(1357008522_uid, "引用这一条");
+    co_await bot.async_send_message(1357008522_uid, "引用上", msgid);
+    const auto end_time = std::chrono::steady_clock::now();
+    fmt::print("发送成功，用了 {}ms\n", (end_time - start_time) / 1.0ms);
 }
 
 int main()
 {
-    clu::coroutine_scope scope;
-    mpp::detail::NetClient client("127.0.0.1", "8080");
-    scope.spawn(log_on_error(get_test(client)));
-    client.run();
-    sync_wait(scope.join());
+    mpp::Bot bot;
+    bot.spawn_catching(test(bot));
+    bot.run();
 }

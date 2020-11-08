@@ -47,7 +47,7 @@ namespace mpp::detail
             std::bind_front(&HttpRequestAwaitable::on_connect, this));
     }
 
-    HttpRequestAwaitable::Response HttpRequestAwaitable::await_resume()
+    response HttpRequestAwaitable::await_resume()
     {
         throw_on_error(ec_);
         return std::move(response_);
@@ -60,6 +60,17 @@ namespace mpp::detail
             ec_ = ec;
             handle.resume();
         });
+    }
+
+    request NetClient::generate_json_post_req(const std::string_view target, std::string&& body) const
+    {
+        http::request<http::string_body> req{ http::verb::post, to_beast_sv(target), 11 };
+        req.set(http::field::host, host_);
+        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+        req.set(http::field::content_type, "application/json; charset=utf-8");
+        req.content_length(body.size());
+        req.body() = std::move(body);
+        return req;
     }
 
     NetClient::NetClient(const std::string_view host, const std::string_view port): host_(host)
@@ -76,13 +87,23 @@ namespace mpp::detail
         return HttpRequestAwaitable(io_ctx_, endpoints_, std::move(req));
     }
 
-    HttpRequestAwaitable NetClient::async_post(const std::string_view target, std::string body)
+    HttpRequestAwaitable NetClient::async_post_json(const std::string_view target, std::string&& body)
     {
-        http::request<http::string_body> req{ http::verb::post, to_beast_sv(target), 11 };
-        req.set(http::field::host, host_);
-        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        req.set(http::field::content_type, "application/json; charset=utf-8");
-        req.body() = std::move(body);
-        return HttpRequestAwaitable(io_ctx_, endpoints_, std::move(req));
+        return HttpRequestAwaitable(io_ctx_, endpoints_, 
+            generate_json_post_req(target, std::move(body)));
+    }
+
+    response NetClient::post_json(const std::string_view target, std::string&& body)
+    {
+        beast::tcp_stream stream(io_ctx_);
+        beast::flat_buffer buffer;
+        response result;
+        stream.connect(endpoints_);
+        http::write(stream, generate_json_post_req(target, std::move(body)));
+        http::read(stream, buffer, result);
+        error_code ec;
+        stream.socket().shutdown(asio::socket_base::shutdown_both, ec);
+        if (ec && ec != beast::errc::not_connected) throw_on_error(ec);
+        return result;
     }
 }

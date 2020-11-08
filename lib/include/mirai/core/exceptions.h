@@ -2,6 +2,11 @@
 
 #include <stdexcept>
 
+namespace boost::beast::http
+{
+    enum class status : unsigned;
+}
+
 namespace mpp
 {
     /// Mirai API HTTP 状态码
@@ -37,4 +42,20 @@ namespace mpp
     };
 
     void check_status_code(MiraiStatus code) noexcept(false); ///< 检查状态码，若不为成功状态则抛出异常
+
+    using HttpStatus = boost::beast::http::status;
+
+    /// HTTP 错误状态码异常类
+    class HttpStatusException : public std::runtime_error
+    {
+    private:
+        HttpStatus status_;
+
+    public:
+        /// 用特定的状态码构建异常
+        explicit HttpStatusException(const HttpStatus status, const std::string& reason):
+            runtime_error(reason), status_(status) {}
+
+        HttpStatus status_code() const noexcept { return status_; } ///< 获取状态码
+    };
 }

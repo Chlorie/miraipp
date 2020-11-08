@@ -14,13 +14,21 @@ endfunction ()
 add_headers(HEADERS
     "core/bot.h"
     "core/common.h"
-    "core/mirai_exception.h"
+    "core/exceptions.h"
+    "core/format.h"
+    "detail/json.h"
     "detail/net_client.h"
+    "message/message.h"
+    "message/segment.h"
+    "message/segment_types.h"
 )
 add_sources(SOURCES
     "core/bot.cpp"
-    "core/mirai_exception.cpp"
+    "core/exceptions.cpp"
     "detail/net_client.cpp"
+    "message/message.cpp"
+    "message/segment.cpp"
+    "message/segment_types.cpp"
 )
 
 find_package(clu REQUIRED)
