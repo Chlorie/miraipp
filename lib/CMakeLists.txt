@@ -16,19 +16,29 @@ add_headers(HEADERS
     "core/common.h"
     "core/exceptions.h"
     "core/format.h"
+    "core/info_types.h"
     "detail/json.h"
+    "detail/multipart_builder.h"
     "detail/net_client.h"
+    "event/event_bases.h"
+    "event/event_types.h"
     "message/message.h"
     "message/segment.h"
     "message/segment_types.h"
+    "message/sent_message.h"
 )
 add_sources(SOURCES
     "core/bot.cpp"
     "core/exceptions.cpp"
+    "core/info_types.cpp"
+    "detail/multipart_builder.cpp"
     "detail/net_client.cpp"
+    "event/event_bases.cpp"
+    "event/event_types.cpp"
     "message/message.cpp"
     "message/segment.cpp"
     "message/segment_types.cpp"
+    "message/sent_message.cpp"
 )
 
 find_package(clu REQUIRED)

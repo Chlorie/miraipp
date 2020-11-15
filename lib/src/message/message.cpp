@@ -1,5 +1,4 @@
 #include "mirai/message/message.h"
-#include "mirai/detail/json.h"
 
 namespace mpp
 {

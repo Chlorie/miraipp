@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.13)
 project(miraipp LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-option(MIRAI_BUILD_DOCS "Build Future++ documentation" OFF)
+option(MIRAI_BUILD_DOCS "Build Mirai++ documentation" OFF)
 option(MIRAI_BUILD_EXAMPLES "Build code examples" OFF)
 
 function (target_set_options TGT)

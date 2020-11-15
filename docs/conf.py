@@ -22,6 +22,14 @@ copyright = '2020, Chlorie'
 author = 'Chlorie'
 
 
+# -- C++ information ---------------------------------------------------------
+
+primary_domain = 'cpp'
+default_role = 'cpp:any'
+highlight_language = 'cpp'
+cpp_index_common_prefix = ['mpp::']
+
+
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be

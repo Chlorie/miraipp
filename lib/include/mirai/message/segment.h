@@ -76,7 +76,7 @@ namespace mpp
         Segment(Segment&&) noexcept = default;
         Segment& operator=(Segment&&) noexcept = default;
 
-        Segment(const Segment& other): impl_(other.impl_->clone()) {}
+        Segment(const Segment& other): impl_(other.impl_->clone()) {} ///< 复制一个消息段
 
         Segment& operator=(const std::string& text) { return *this = Plain{ text }; }
         Segment& operator=(std::string&& text) { return *this = Plain{ std::move(text) }; }

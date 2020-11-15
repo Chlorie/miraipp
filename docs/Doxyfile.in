@@ -1,7 +1,10 @@
 INPUT = @PROJECT_SOURCE_DIR@/lib/include/mirai
 EXCLUDE = @PROJECT_SOURCE_DIR@/lib/include/mirai/detail
+EXCLUDE_SYMBOLS = mpp::detail
 RECURSIVE = YES
 OUTPUT_LANGUAGE = Chinese
+GENERATE_HTML = NO
+GENERATE_LATEX = NO
 GENERATE_XML = YES
 WARN_IF_UNDOCUMENTED = NO
 ALIASES = "rst=\verbatim embed:rst:leading-asterisk"

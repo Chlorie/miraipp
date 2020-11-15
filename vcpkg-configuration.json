@@ -1,8 +1,8 @@
 {
     "registries": [
         {
-            "kind": "directory",
-            "path": "../vcpkg-ports/ports",
+            "kind": "filesystem",
+            "path": "../vcpkg-ports",
             "packages": ["clu"]
         }
     ]

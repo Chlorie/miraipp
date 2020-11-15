@@ -1,16 +1,22 @@
 #pragma once
 
 #include <iostream>
+#include <filesystem>
+#include <span>
 #include <clu/coroutine/coroutine_scope.h>
 #include <clu/coroutine/task.h>
 #include <clu/optional_ref.h>
 
 #include "common.h"
-#include "../message/message.h"
 #include "../detail/net_client.h"
 
 namespace mpp
 {
+    class Message;
+    class Event;
+    struct Image;
+    struct Voice;
+
     /// Mirai++ 中功能的核心类型，代表 mirai-api-http 中的一个会话。此类不可复制或移动。
     class Bot final
     {
@@ -32,6 +38,8 @@ namespace mpp
         }
 
         std::string release_body() const;
+        std::string send_message_body(int64_t id, const Message& message, clu::optional_param<MessageId> quote) const;
+        std::string group_target_body(GroupId group) const;
 
     public:
         /**
@@ -49,7 +57,8 @@ namespace mpp
         Bot& operator=(const Bot&) = delete;
         Bot& operator=(Bot&&) = delete;
 
-        bool authorized() const noexcept { return bot_id_.valid(); } ///< 当前 Bot 是否已授权
+        UserId id() const noexcept { return bot_id_; } ///< 获取当前 bot 的 QQ 号
+        bool authorized() const noexcept { return bot_id_.valid(); } ///< 当前 bot 是否已授权
 
         /**
          * \brief 异步地获取 mirai-api-http 版本号
@@ -61,17 +70,12 @@ namespace mpp
          * \brief 异步地授权并校验一个 session
          * \param auth_key mirai-http-server 中指定的授权用 key
          * \param id 对应的已登录 bot 的 QQ 号
-         * \return （异步）无返回值
          */
         clu::task<> async_auth(std::string_view auth_key, UserId id);
 
         void release(); ///< 同步地释放当前会话，若当前对象析构时会话仍在开启状态则会调用此函数
 
-        /**
-         * \brief 异步地释放当前会话
-         * \return （异步）无返回值
-         */
-        clu::task<> async_release();
+        clu::task<> async_release(); ///< 异步地释放当前会话
 
         /**
          * \brief 异步地向给定好友发送消息
@@ -81,6 +85,79 @@ namespace mpp
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
         clu::task<MessageId> async_send_message(UserId id, const Message& message, clu::optional_param<MessageId> quote = {});
+
+        /**
+         * \brief 异步地向给定群发送消息
+         * \param id 群号
+         * \param message 消息内容
+         * \param quote （可选）要引用回复的消息 id
+         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         */
+        clu::task<MessageId> async_send_message(GroupId id, const Message& message, clu::optional_param<MessageId> quote = {});
+
+        /**
+         * \brief 异步地发送临时会话消息
+         * \param id 临时会话对象
+         * \param message 消息内容
+         * \param quote （可选）要引用回复的消息 id
+         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         */
+        clu::task<MessageId> async_send_message(TempId id, const Message& message, clu::optional_param<MessageId> quote = {});
+
+        /**
+         * \brief 异步地撤回一条消息
+         * \param id 要撤回的消息 id
+         */
+        clu::task<> async_recall(MessageId id);
+
+        // clu::task<std::vector<std::string>> async_send_image_message(UserId id, const std::vector<std::string>& urls);
+        // clu::task<std::vector<std::string>> async_send_image_message(GroupId id, const std::vector<std::string>& urls);
+        // clu::task<std::vector<std::string>> async_send_image_message(TempId id, const std::vector<std::string>& urls);
+
+        /**
+         * \brief 上传图片以获得可用于发送的图片消息段
+         * \param type 图片发送目标的类型（好友图片与群图片不通用）
+         * \param path 图片文件的路径
+         * \return （异步）上传成功的图片消息段
+         */
+        clu::task<Image> async_upload_image(TargetType type, const std::filesystem::path& path);
+        
+        /**
+         * \brief 上传语音以获得可用于发送的语音消息段
+         * \param type 语音发送目标的类型（好友语音与群语音不通用）
+         * \param path 语音文件的路径
+         * \return （异步）上传成功的语音消息段
+         */
+        clu::task<Voice> async_upload_voice(TargetType type, const std::filesystem::path& path);
+
+        // clu::task<std::vector<Event>> async_pop_events(size_t count);
+        // clu::task<std::vector<Event>> async_pop_latest_events(size_t count);
+        // clu::task<std::vector<Event>> async_peek_events(size_t count);
+        // clu::task<std::vector<Event>> async_peek_latest_events(size_t count);
+
+        // clu::task<Event> async_retrieve_message(MessageId id);
+        // clu::task<size_t> async_count_message();
+
+        // clu::task<std::vector<Friend>> async_list_friends();
+        // clu::task<std::vector<Group>> async_list_groups();
+        // clu::task<std::vector<Member>> async_list_members(GroupId id);
+
+        clu::task<> async_mute(GroupId group, UserId user, std::chrono::seconds duration);
+        clu::task<> async_unmute(GroupId group, UserId user);
+        clu::task<> async_mute_all(GroupId group);
+        clu::task<> async_unmute_all(GroupId group);
+
+        clu::task<> async_kick(GroupId group, UserId user, std::string_view reason);
+        clu::task<> async_quit(GroupId group);
+
+        // clu::task<> async_respond(const NewFriendRequestEvent& event, NewFriendResponseType type, std::string_view reason);
+        // clu::task<> async_respond(const MemberJoinRequestEvent& event, MemberJoinResponseType type, std::string_view reason);
+
+        // clu::task<GroupConfig> async_get_group_config(GroupId group);
+        // clu::task<> async_config_group(GroupId group, const GroupConfig& config);
+
+        // clu::task<MemberInfo> async_get_member_info(GroupId group, UserId user);
+        // clu::task<> async_set_member_info(GroupId group, UserId user, const MemberInfo& info);
 
         /**
          * \brief 异步等待直到某时间点
@@ -96,7 +173,7 @@ namespace mpp
          */
         auto async_wait(const Clock::duration dur) { return net_client_.async_wait(Clock::now() + dur); }
 
-        auto& coroutine_scope() { return coro_scope_; } ///< 获取该 bot 对应的协程作用域
+        clu::coroutine_scope& coroutine_scope() { return coro_scope_; } ///< 获取该 bot 对应的协程作用域
 
         /// 在 bot 对应的协程作用域上等待一个可等待体，若有未处理的异常则调用 std::terminate
         template <clu::awaitable T>

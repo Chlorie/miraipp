@@ -24,6 +24,8 @@ add_custom_command(
 
 add_custom_target(Doxygen ALL DEPENDS ${DOXYGEN_INDEX_FILE})
 
+file(GLOB_RECURSE RST_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/*/*.rst")
+
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${PROJECT_SOURCE_DIR}/docs/output)
 set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
@@ -37,11 +39,11 @@ add_custom_command(
     COMMAND
         ${SPHINX_EXECUTABLE} -b html
         # Tell Breathe where to find the Doxygen output
-        -Dbreathe_projects.futurepp=${DOXYGEN_OUTPUT_DIR}/xml
+        -Dbreathe_projects.miraipp=${DOXYGEN_OUTPUT_DIR}/xml
     ${SPHINX_SOURCE} ${SPHINX_BUILD}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/index.rst
+        "${CMAKE_CURRENT_SOURCE_DIR}/index.rst"
         ${DOXYGEN_INDEX_FILE}
     MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
     COMMENT "Generating documentation with Sphinx")

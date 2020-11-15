@@ -38,7 +38,7 @@ namespace mpp::detail
         void on_read(error_code ec, size_t);
 
     public:
-        explicit HttpRequestAwaitable(asio::io_context& ctx, const endpoints& eps, request&& req):
+        HttpRequestAwaitable(asio::io_context& ctx, const endpoints& eps, request&& req):
             endpoints_(eps), stream_(ctx), request_(std::move(req)) {}
 
         bool await_ready() const noexcept { return false; }
@@ -74,10 +74,13 @@ namespace mpp::detail
         NetClient(std::string_view host, std::string_view port);
 
         HttpRequestAwaitable async_get(std::string_view target);
+        HttpRequestAwaitable async_request(request&& req) { return HttpRequestAwaitable(io_ctx_, endpoints_, std::move(req)); }
         HttpRequestAwaitable async_post_json(std::string_view target, std::string&& body);
         response post_json(std::string_view target, std::string&& body);
         WaitUntilAwaitable async_wait(const time_point tp) { return WaitUntilAwaitable(io_ctx_, tp); }
 
+        asio::io_context& io_context() { return io_ctx_; }
+        const std::string& host() const noexcept { return host_; }
         void run() { io_ctx_.run(); }
     };
 }

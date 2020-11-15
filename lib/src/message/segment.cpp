@@ -4,10 +4,9 @@
 
 namespace mpp
 {
-    using namespace clu::literals;
-
     Segment Segment::from_json(const detail::JsonElem json)
     {
+        using namespace clu::literals;
         const std::string_view type = json["type"];
         // @formatter:off
         switch (clu::fnv1a(type))

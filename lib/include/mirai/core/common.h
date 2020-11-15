@@ -10,7 +10,7 @@ namespace mpp
         int64_t id = 0; ///< 整数 id
         constexpr UserId() = default; ///< 构造一个空 QQ 号
         constexpr explicit UserId(const int64_t uid): id(uid) {} ///< 由一个整数 id 构造一个 QQ 号
-        constexpr bool operator==(const UserId&) const = default; ///< 判断两个 QQ 号是否相等
+        constexpr friend bool operator==(UserId, UserId) = default; ///< 判断两个 QQ 号是否相等
         constexpr explicit operator bool() const noexcept { return id != 0; } ///< 当前 QQ 号是否有效
         constexpr bool valid() const noexcept { return id != 0; } ///< 当前 QQ 号是否有效
     };
@@ -21,9 +21,17 @@ namespace mpp
         int64_t id = 0; ///< 整数 id
         constexpr GroupId() = default; ///< 构造一个空群号
         constexpr explicit GroupId(const int64_t gid): id(gid) {} ///< 由一个整数 id 构造一个群号
-        constexpr bool operator==(const GroupId&) const = default; ///< 判断两个群号是否相等
+        constexpr friend bool operator==(GroupId, GroupId) = default; ///< 判断两个群号是否相等
         constexpr explicit operator bool() const noexcept { return id != 0; } ///< 当前群号是否有效
         constexpr bool valid() const noexcept { return id != 0; } ///< 当前群号是否有效
+    };
+
+    /// 从群聊中发起临时会话的目标 id，包含 QQ 号和群号
+    struct [[nodiscard]] TempId final
+    {
+        UserId uid{}; ///< 临时会话的对象 QQ 号
+        GroupId gid{}; ///< 发起临时会话的群号
+        constexpr friend bool operator==(TempId, TempId) = default; ///< 判断两个临时会话目标是否相等
     };
 
     /// 消息号
@@ -32,8 +40,24 @@ namespace mpp
         int32_t id = 0; ///< 整数 id
         constexpr MessageId() = default; ///< 构造一个空消息号
         constexpr explicit MessageId(const int32_t mid): id(mid) {} ///< 由一个整数 id 构造一个消息号
-        constexpr bool operator==(const MessageId&) const = default; ///< 判断两个消息号是否相等
+        constexpr friend bool operator==(MessageId, MessageId) = default; ///< 判断两个消息号是否相等
     };
+
+    /// 消息发送对象的类别
+    enum class TargetType : uint8_t { friend_, group, temp };
+
+    constexpr std::string_view to_string_view(const TargetType type)
+    {
+        // @formatter:off
+        switch (type)
+        {
+            case TargetType::friend_: return "friend";
+            case TargetType::group:   return "group";
+            case TargetType::temp:    return "temp";
+        }
+        // @formatter:on
+        return {};
+    }
 
     /// 该命名空间中定义了一些用户自定义字面量 (UDL)
     namespace literals

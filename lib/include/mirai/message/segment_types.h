@@ -2,19 +2,12 @@
 
 #include <optional>
 #include <string>
-#include <simdjson.h>
 
 #include "../core/common.h"
-#include "../core/format.h"
+#include "../detail/json.h"
 
 namespace mpp
 {
-    namespace detail
-    {
-        using JsonElem = simdjson::dom::element;
-        using JsonRes = simdjson::simdjson_result<JsonElem>;
-    }
-
     /// 消息段类型枚举
     enum class SegmentType : uint8_t
     {

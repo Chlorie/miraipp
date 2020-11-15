@@ -1,9 +1,10 @@
 #pragma once
 
 #include <optional>
-#include <fmt/core.h>
 #include <simdjson.h>
 #include <clu/concepts.h>
+
+#include "../core/format.h"
 
 namespace mpp::detail
 {
@@ -166,7 +167,7 @@ namespace mpp::detail
     {
         JsonRes json;
 
-        template <JsonDeserializable T> explicit(false) operator T() const { return T::from_json(json); }
+        template <JsonDeserializable T> explicit(false) operator T() { return T::from_json(json.value()); }
 
         template <std::integral T>
         explicit(false) operator T() const

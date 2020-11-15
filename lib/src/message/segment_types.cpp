@@ -1,5 +1,4 @@
 #include "mirai/message/segment_types.h"
-#include "mirai/detail/json.h"
 
 namespace mpp
 {
@@ -68,9 +67,9 @@ namespace mpp
     {
         detail::JsonObjScope obj(ctx);
         obj.add_entry("type", "Image");
-        obj.add_entry("imageId", image_id);
-        obj.add_entry("url", url);
-        obj.add_entry("path", path);
+        if (image_id) return obj.add_entry("imageId", image_id);
+        if (url) return obj.add_entry("url", url);
+        if (path) return obj.add_entry("path", path);
     }
 
     Image Image::from_json(const detail::JsonElem json)
@@ -95,9 +94,9 @@ namespace mpp
     {
         detail::JsonObjScope obj(ctx);
         obj.add_entry("type", "FlashImage");
-        obj.add_entry("imageId", image_id);
-        obj.add_entry("url", url);
-        obj.add_entry("path", path);
+        if (image_id) return obj.add_entry("imageId", image_id);
+        if (url) return obj.add_entry("url", url);
+        if (path) return obj.add_entry("path", path);
     }
 
     FlashImage FlashImage::from_json(const detail::JsonElem json)
@@ -121,10 +120,10 @@ namespace mpp
     void Voice::format_as_json(fmt::format_context& ctx) const
     {
         detail::JsonObjScope obj(ctx);
-        obj.add_entry("type", "FlashImage");
-        obj.add_entry("voiceId", voice_id);
-        obj.add_entry("url", url);
-        obj.add_entry("path", path);
+        obj.add_entry("type", "Voice");
+        if (voice_id) return obj.add_entry("voiceId", voice_id);
+        if (url) return obj.add_entry("url", url);
+        if (path) return obj.add_entry("path", path);
     }
 
     Voice Voice::from_json(const detail::JsonElem json)
