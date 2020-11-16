@@ -17,6 +17,13 @@ namespace mpp
         new_friend_request, member_join_request, bot_invited_join_group_request
     };
 
+    // @formatter:off
+    /// 事件组成类型概念
+    template <typename T>
+    concept EventComponent = std::derived_from<T, EventBase>
+        && requires { {T::type} -> std::convertible_to<EventType>; };
+    // @formatter:on
+
     /// 私聊消息事件
     struct FriendMessageEvent final : EventBase
     {
@@ -31,7 +38,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote) const;
+        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地引用回复本消息
@@ -59,7 +66,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote) const;
+        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地引用回复本消息
@@ -93,7 +100,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote) const;
+        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地引用回复本消息

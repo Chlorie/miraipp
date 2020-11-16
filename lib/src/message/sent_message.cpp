@@ -29,7 +29,7 @@ namespace mpp
         for (const auto elem : json)
         {
             using namespace clu::literals;
-            const std::string_view type = json["type"];
+            const std::string_view type = elem["type"];
             // @formatter:off
             switch (clu::fnv1a(type))
             {

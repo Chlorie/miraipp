@@ -43,6 +43,7 @@ namespace mpp
             if (self.type() != T::type)
                 throw std::runtime_error("消息段类型不匹配");
             T& ref = static_cast<SegmentModelImpl<T>&>(*self.impl_).get();
+            // TODO: clu::copy_cvref_t
             if constexpr (std::same_as<Self, Segment&>)
                 return ref;
             else if constexpr (std::same_as<Self, const Segment&>)

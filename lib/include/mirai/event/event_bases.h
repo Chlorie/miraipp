@@ -38,7 +38,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote) const;
+        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         static GroupEventBase from_json(detail::JsonElem json);
     };
@@ -76,7 +76,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote) const;
+        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地禁言与当前事件关联的群成员

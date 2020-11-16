@@ -5,7 +5,7 @@
 #include "mirai/core/exceptions.h"
 #include "mirai/message/message.h"
 #include "mirai/detail/multipart_builder.h"
-#include "mirai/event/event_types.h"
+#include "mirai/event/event.h"
 
 namespace mpp
 {
@@ -28,7 +28,7 @@ namespace mpp
             }
             return json;
         }
-        
+
         auto to_beast_sv(const std::string_view sv)
         {
             return boost::beast::string_view{ sv.data(), sv.size() };
@@ -62,6 +62,14 @@ namespace mpp
             scope.add_entry("sessionKey", sess_key_);
             scope.add_entry("target", group.id);
         });
+    }
+
+    std::vector<Event> Bot::parse_events(const detail::JsonElem json)
+    {
+        std::vector<Event> events;
+        for (const auto elem : json) 
+            events.emplace_back(Event::from_json(elem)).event_base().bot_ = this;
+        return events;
     }
 
     Bot::~Bot() noexcept
@@ -191,6 +199,34 @@ namespace mpp
 
         const auto res = get_response_json(co_await net_client_.async_request(std::move(req)));
         co_return Voice::from_json(res);
+    }
+
+    clu::task<std::vector<Event>> Bot::async_pop_events(const size_t count)
+    {
+        const auto json = get_response_json(co_await net_client_.async_get(
+            fmt::format("/fetchMessage?sessionKey={}&count={}", sess_key_, count)));
+        co_return parse_events(json["data"]);
+    }
+
+    clu::task<std::vector<Event>> Bot::async_pop_latest_events(const size_t count)
+    {
+        const auto json = get_response_json(co_await net_client_.async_get(
+            fmt::format("/fetchLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        co_return parse_events(json["data"]);
+    }
+
+    clu::task<std::vector<Event>> Bot::async_peek_events(const size_t count)
+    {
+        const auto json = get_response_json(co_await net_client_.async_get(
+            fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
+        co_return parse_events(json["data"]);
+    }
+
+    clu::task<std::vector<Event>> Bot::async_peek_latest_events(const size_t count)
+    {
+        const auto json = get_response_json(co_await net_client_.async_get(
+            fmt::format("/peekLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        co_return parse_events(json["data"]);
     }
 
     clu::task<> Bot::async_mute(const GroupId group, const UserId user, std::chrono::seconds duration)

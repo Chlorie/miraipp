@@ -232,8 +232,8 @@ namespace mpp
         return
         {
             MemberExecutorEventBase::from_json(json),
-            .original = detail::from_json(json["origin"]),
-            .current = detail::from_json(json["current"])
+            detail::from_json(json["origin"]),
+            detail::from_json(json["current"])
         };
     }
 

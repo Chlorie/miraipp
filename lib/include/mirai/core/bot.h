@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "../detail/net_client.h"
+#include "../detail/json.h"
 
 namespace mpp
 {
@@ -40,6 +41,7 @@ namespace mpp
         std::string release_body() const;
         std::string send_message_body(int64_t id, const Message& message, clu::optional_param<MessageId> quote) const;
         std::string group_target_body(GroupId group) const;
+        std::vector<Event> parse_events(detail::JsonElem json);
 
     public:
         /**
@@ -130,10 +132,33 @@ namespace mpp
          */
         clu::task<Voice> async_upload_voice(TargetType type, const std::filesystem::path& path);
 
-        // clu::task<std::vector<Event>> async_pop_events(size_t count);
-        // clu::task<std::vector<Event>> async_pop_latest_events(size_t count);
-        // clu::task<std::vector<Event>> async_peek_events(size_t count);
-        // clu::task<std::vector<Event>> async_peek_latest_events(size_t count);
+        /**
+         * \brief 接收 bot 收到的最老的消息和事件，并将这些事件从事件队列中删除
+         * \param count 获取事件个数的上限
+         * \return （异步）获取到的事件
+         */
+        clu::task<std::vector<Event>> async_pop_events(size_t count);
+        
+        /**
+         * \brief 接收 bot 收到的最新的消息和事件，并将这些事件从事件队列中删除
+         * \param count 获取事件个数的上限
+         * \return （异步）获取到的事件
+         */
+        clu::task<std::vector<Event>> async_pop_latest_events(size_t count);
+        
+        /**
+         * \brief 接收 bot 收到的最老的消息和事件
+         * \param count 获取事件个数的上限
+         * \return （异步）获取到的事件
+         */
+        clu::task<std::vector<Event>> async_peek_events(size_t count);
+        
+        /**
+         * \brief 接收 bot 收到的最新的消息和事件
+         * \param count 获取事件个数的上限
+         * \return （异步）获取到的事件
+         */
+        clu::task<std::vector<Event>> async_peek_latest_events(size_t count);
 
         // clu::task<Event> async_retrieve_message(MessageId id);
         // clu::task<size_t> async_count_message();
