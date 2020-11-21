@@ -10,25 +10,25 @@ namespace mpp::detail
         }
     }
 
-    void HttpRequestAwaitable::resume_with_error(const error_code ec)
+    void HttpSession::resume_with_error(const error_code ec)
     {
         ec_ = ec;
         handle_();
     }
 
-    void HttpRequestAwaitable::on_connect(const error_code ec, const tcp::endpoint&)
+    void HttpSession::on_connect(const error_code ec, const tcp::endpoint&)
     {
         ec ? resume_with_error(ec) : http::async_write(stream_, request_,
-            std::bind_front(&HttpRequestAwaitable::on_write, this));
+            std::bind_front(&HttpSession::on_write, this));
     }
 
-    void HttpRequestAwaitable::on_write(const error_code ec, size_t)
+    void HttpSession::on_write(const error_code ec, size_t)
     {
         ec ? resume_with_error(ec) : http::async_read(stream_, buffer_, response_,
-            std::bind_front(&HttpRequestAwaitable::on_read, this));
+            std::bind_front(&HttpSession::on_read, this));
     }
 
-    void HttpRequestAwaitable::on_read(error_code ec, size_t)
+    void HttpSession::on_read(error_code ec, size_t)
     {
         if (ec)
         {
@@ -40,14 +40,14 @@ namespace mpp::detail
         handle_();
     }
 
-    void HttpRequestAwaitable::await_suspend(const std::coroutine_handle<> handle)
+    void HttpSession::await_suspend(const std::coroutine_handle<> handle)
     {
         handle_ = handle;
         stream_.async_connect(endpoints_,
-            std::bind_front(&HttpRequestAwaitable::on_connect, this));
+            std::bind_front(&HttpSession::on_connect, this));
     }
 
-    response HttpRequestAwaitable::await_resume()
+    response HttpSession::await_resume()
     {
         throw_on_error(ec_);
         return std::move(response_);
@@ -79,17 +79,17 @@ namespace mpp::detail
         endpoints_ = resolver.resolve(host, port);
     }
 
-    HttpRequestAwaitable NetClient::async_get(const std::string_view target)
+    HttpSession NetClient::async_get(const std::string_view target)
     {
         http::request<http::string_body> req{ http::verb::get, to_beast_sv(target), 11 };
         req.set(http::field::host, host_);
         req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        return HttpRequestAwaitable(io_ctx_, endpoints_, std::move(req));
+        return HttpSession(io_ctx_, endpoints_, std::move(req));
     }
 
-    HttpRequestAwaitable NetClient::async_post_json(const std::string_view target, std::string&& body)
+    HttpSession NetClient::async_post_json(const std::string_view target, std::string&& body)
     {
-        return HttpRequestAwaitable(io_ctx_, endpoints_, 
+        return HttpSession(io_ctx_, endpoints_, 
             generate_json_post_req(target, std::move(body)));
     }
 

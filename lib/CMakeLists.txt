@@ -43,7 +43,7 @@ add_sources(SOURCES
     "message/sent_message.cpp"
 )
 
-find_package(clu REQUIRED)
+find_package(clu CONFIG REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(Threads)

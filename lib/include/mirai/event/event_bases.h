@@ -8,6 +8,8 @@
 
 namespace mpp
 {
+    class Bot;
+
     /// 事件基类
     class EventBase
     {
@@ -15,15 +17,8 @@ namespace mpp
     private:
         Bot* bot_ = nullptr;
 
-    protected:
-        ~EventBase() noexcept = default;
-        EventBase(const EventBase&) noexcept = default;
-        EventBase(EventBase&&) noexcept = default;
-        EventBase& operator=(const EventBase&) noexcept = default;
-        EventBase& operator=(EventBase&&) noexcept = default;
-
     public:
-        EventBase() noexcept = default;
+        constexpr EventBase() noexcept = default;
         Bot& bot() const noexcept { return *bot_; } ///< 获取指向收到该事件的 bot 的引用
     };
 

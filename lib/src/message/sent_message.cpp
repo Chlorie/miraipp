@@ -19,7 +19,7 @@ namespace mpp
         {
             .id = MessageId(detail::from_json(json["id"])),
             .sender = UserId(detail::from_json(json["senderId"])),
-            .msg = detail::from_json(json["origin"])
+            .msg = Message::from_json(json["origin"])
         };
     }
 

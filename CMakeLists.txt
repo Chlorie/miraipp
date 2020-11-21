@@ -58,7 +58,10 @@ function (target_set_options TGT)
             /experimental:external /external:W0 /external:anglebrackets)
     else () # Not Visual Studio, assuming gcc or clang
         target_compile_options(${TGT} PRIVATE
-            -Wall -Wextra -pedantic -Wundef -Wconversion -Wzero-as-null-pointer-constant -Werror)
+            -Wall -Wextra -pedantic -Wundef -Werror
+            -Wno-missing-field-initializers # Aggregate init with base class would be impossible with this warning
+            # TODO: gcc trunk currently confuses itself in coroutine code, remove this later when gcc behaves well
+            -Wno-unused-value)
     endif ()
 endfunction ()
 

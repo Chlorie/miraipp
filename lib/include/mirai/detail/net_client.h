@@ -12,6 +12,7 @@ namespace mpp::detail
     namespace asio = boost::asio;
     namespace beast = boost::beast;
     namespace http = beast::http;
+    namespace ws = beast::websocket;
     using tcp = asio::ip::tcp;
     using error_code = boost::system::error_code;
     using endpoints = tcp::resolver::results_type;
@@ -21,7 +22,7 @@ namespace mpp::detail
 
     inline void throw_on_error(const error_code ec) { if (ec) throw boost::system::system_error(ec); }
 
-    class [[nodiscard]] HttpRequestAwaitable final
+    class [[nodiscard]] HttpSession final
     {
     private:
         const endpoints& endpoints_;
@@ -38,7 +39,7 @@ namespace mpp::detail
         void on_read(error_code ec, size_t);
 
     public:
-        HttpRequestAwaitable(asio::io_context& ctx, const endpoints& eps, request&& req):
+        HttpSession(asio::io_context& ctx, const endpoints& eps, request&& req):
             endpoints_(eps), stream_(ctx), request_(std::move(req)) {}
 
         bool await_ready() const noexcept { return false; }
@@ -61,6 +62,16 @@ namespace mpp::detail
         void await_resume() const { throw_on_error(ec_); }
     };
 
+    class [[nodiscard]] WebsocketSession final
+    {
+    private:
+        ws::stream<beast::tcp_stream> stream_;
+        beast::flat_buffer buffer_;
+
+    public:
+
+    };
+
     class NetClient final
     {
     private:
@@ -73,9 +84,9 @@ namespace mpp::detail
     public:
         NetClient(std::string_view host, std::string_view port);
 
-        HttpRequestAwaitable async_get(std::string_view target);
-        HttpRequestAwaitable async_request(request&& req) { return HttpRequestAwaitable(io_ctx_, endpoints_, std::move(req)); }
-        HttpRequestAwaitable async_post_json(std::string_view target, std::string&& body);
+        HttpSession async_get(std::string_view target);
+        HttpSession async_request(request&& req) { return HttpSession(io_ctx_, endpoints_, std::move(req)); }
+        HttpSession async_post_json(std::string_view target, std::string&& body);
         response post_json(std::string_view target, std::string&& body);
         WaitUntilAwaitable async_wait(const time_point tp) { return WaitUntilAwaitable(io_ctx_, tp); }
 

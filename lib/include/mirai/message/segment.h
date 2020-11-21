@@ -1,5 +1,7 @@
 #pragma once
 
+#include <clu/type_traits.h>
+
 #include "segment_types.h"
 
 namespace mpp
@@ -43,15 +45,7 @@ namespace mpp
             if (self.type() != T::type)
                 throw std::runtime_error("消息段类型不匹配");
             T& ref = static_cast<SegmentModelImpl<T>&>(*self.impl_).get();
-            // TODO: clu::copy_cvref_t
-            if constexpr (std::same_as<Self, Segment&>)
-                return ref;
-            else if constexpr (std::same_as<Self, const Segment&>)
-                return static_cast<const T&>(ref);
-            else if constexpr (std::same_as<Self, Segment>)
-                return static_cast<T&&>(ref);
-            else // const Segment
-                return static_cast<const T&&>(ref);
+            return static_cast<clu::copy_cvref_t<Self&&, T>>(ref);
         }
 
         template <SegmentComponent T> T* get_if_impl() const
@@ -70,7 +64,7 @@ namespace mpp
         explicit(false) Segment(const std::string& text): Segment(Plain{ text }) {}
         explicit(false) Segment(std::string&& text): Segment(Plain{ std::move(text) }) {}
         explicit(false) Segment(const char* text): Segment(Plain{ text }) {}
-        template <typename T> requires std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>
+        template <typename T> requires (std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>)
         explicit(false) Segment(const T& text): Segment(Plain{ std::string(text) }) {}
 
         ~Segment() noexcept = default;
@@ -82,7 +76,7 @@ namespace mpp
         Segment& operator=(const std::string& text) { return *this = Plain{ text }; }
         Segment& operator=(std::string&& text) { return *this = Plain{ std::move(text) }; }
         Segment& operator=(const char* text) { return *this = Plain{ text }; }
-        template <typename T> requires std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>
+        template <typename T> requires (std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>)
         Segment& operator=(const T& text) { return *this = Plain{ std::string(text) }; }
 
         template <typename T> requires SegmentComponent<std::remove_cvref_t<T>>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <clu/type_traits.h>
 
 #include "event_types.h"
 
@@ -44,15 +45,7 @@ namespace mpp
             if (self.type() != T::type)
                 throw std::runtime_error("事件类型不匹配");
             T& ref = static_cast<EventModelImpl<T>&>(*self.impl_).get();
-            // TODO: clu::copy_cvref_t
-            if constexpr (std::same_as<Self, Event&>)
-                return ref;
-            else if constexpr (std::same_as<Self, const Event&>)
-                return static_cast<const T&>(ref);
-            else if constexpr (std::same_as<Self, Event>)
-                return static_cast<T&&>(ref);
-            else // const Event
-                return static_cast<const T&&>(ref);
+            return static_cast<clu::copy_cvref_t<Self&&, T>>(ref);
         }
 
         template <EventComponent T> T* get_if_impl() const
