@@ -2,7 +2,7 @@
 
 #include <optional>
 #include <simdjson.h>
-#include <clu/concepts.h>
+#include <span>
 
 #include "../core/format.h"
 
@@ -74,6 +74,8 @@ namespace mpp::detail
         fmt::format_to(ctx.out(), "{}", JsonQuoted{ value });
     }
 
+    template <typename T> void format_to_json(fmt::format_context& ctx, std::span<T> span);
+
     template <typename T>
     void format_to_json(fmt::format_context& ctx, const std::optional<T>& value)
     {
@@ -121,6 +123,13 @@ namespace mpp::detail
         }
     };
 
+    template <typename T>
+    void format_to_json(fmt::format_context& ctx, const std::span<T> span)
+    {
+        JsonArrScope scope(ctx);
+        for (const T& elem : span) scope.add_entry(elem);
+    }
+
     template <typename Inv>
     struct FormatWrapper
     {
@@ -163,38 +172,69 @@ namespace mpp::detail
 // Deserialization
 namespace mpp::detail
 {
-    struct FromJsonImpl
+    template <typename T> struct FromJsonImpl {};
+
+    template <JsonDeserializable T>
+    struct FromJsonImpl<T>
     {
-        JsonRes json;
+        static T get(JsonRes json) { return T::from_json(json.value()); }
+    };
 
-        template <JsonDeserializable T> explicit(false) operator T() { return T::from_json(json.value()); }
-
-        template <std::integral T>
-        explicit(false) operator T() const
+    template <std::integral T>
+    struct FromJsonImpl<T>
+    {
+        static T get(const JsonRes json)
         {
             if constexpr (std::same_as<T, bool>)
-                return static_cast<bool>(json);
+                return json.get_bool();
             else if constexpr (std::unsigned_integral<T>)
                 return static_cast<T>(json.get_uint64());
             else // std::signed_integral<T>
                 return static_cast<T>(json.get_int64());
         }
+    };
 
-        template <std::floating_point T> explicit(false) operator T() const { return static_cast<T>(json.get_double()); }
+    template <std::floating_point T>
+    struct FromJsonImpl<T>
+    {
+        static T get(const JsonRes json) { return static_cast<T>(json.get_double()); }
+    };
 
-        explicit(false) operator std::string() const { return std::string(json); }
+    template <>
+    struct FromJsonImpl<std::string>
+    {
+        static std::string get(const JsonRes json) { return std::string(json); }
+    };
 
-        explicit(false) operator std::string_view() const { return std::string_view(json); }
+    template <>
+    struct FromJsonImpl<std::string_view>
+    {
+        static std::string_view get(const JsonRes json) { return std::string(json); }
+    };
 
-        template <typename T>
-        explicit(false) operator std::optional<T>() const
+    template <typename T>
+    struct FromJsonImpl<std::optional<T>>
+    {
+        static std::optional<T> get(const JsonRes json)
         {
             if (json.error() == simdjson::NO_SUCH_FIELD || json.is_null())
                 return std::nullopt;
             else
-                return operator T();
+                return FromJsonImpl<T>::get(json);
         }
     };
 
-    inline auto from_json(const JsonRes json) { return FromJsonImpl{ json }; }
+    template <typename T>
+    struct FromJsonImpl<std::vector<T>>
+    {
+        static std::vector<T> get(const JsonRes json)
+        {
+            std::vector<T> result;
+            for (const JsonRes elem : json)
+                result.emplace_back(FromJsonImpl<T>::get(elem));
+            return result;
+        }
+    };
+
+    template <typename T> auto from_json(const JsonRes json) { return FromJsonImpl<T>::get(json); }
 }

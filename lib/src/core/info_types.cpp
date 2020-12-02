@@ -23,9 +23,9 @@ namespace mpp
     {
         return
         {
-            .id = UserId(detail::from_json(json["id"])),
-            .name = detail::from_json(json["nickname"]),
-            .remark = detail::from_json(json["remark"])
+            .id = UserId(json["id"].get_int64()),
+            .name = detail::from_json<std::string>(json["nickname"]),
+            .remark = detail::from_json<std::string>(json["remark"])
         };
     }
 
@@ -33,8 +33,8 @@ namespace mpp
     {
         return
         {
-            .id = GroupId(detail::from_json(json["id"])),
-            .name = detail::from_json(json["name"]),
+            .id = GroupId(json["id"].get_int64()),
+            .name = detail::from_json<std::string>(json["name"]),
             .permission = permission_from_string(json["permission"])
         };
     }
@@ -44,8 +44,8 @@ namespace mpp
         return
         {
             .group = Group::from_json(json["group"]),
-            .id = UserId(detail::from_json(json["id"])),
-            .name = detail::from_json(json["memberName"]),
+            .id = UserId(json["id"].get_int64()),
+            .name = detail::from_json<std::string>(json["memberName"]),
             .permission = permission_from_string(json["permission"])
         };
     }

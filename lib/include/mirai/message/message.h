@@ -104,8 +104,10 @@ namespace mpp
         {
             return vec_
                 | std::views::filter([](const Segment& seg) { return seg.type() == T::type; })
-                | std::views::transform([](const Segment& seg) -> const T& { return seg.get<T>(); });
+                | std::views::transform([](const Segment& seg) -> auto&& { return seg.get<T>(); });
         }
+
+        std::string collect_text() const; ///< 获取消息中所有纯文本消息段连接而成的字符串
 
         void format_to(fmt::format_context& ctx) const;
         void format_as_json(fmt::format_context& ctx) const;

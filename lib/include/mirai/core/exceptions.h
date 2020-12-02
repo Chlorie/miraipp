@@ -58,4 +58,6 @@ namespace mpp
 
         HttpStatus status_code() const noexcept { return status_; } ///< 获取状态码
     };
+
+    void log_exception(); ///< 将当前捕获到的异常信息输出到 stderr
 }

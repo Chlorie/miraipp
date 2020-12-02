@@ -8,8 +8,8 @@ namespace mpp
     {
         return Source
         {
-            .id = MessageId(detail::from_json(json["id"])),
-            .time = detail::from_json(json["time"])
+            .id = MessageId(detail::from_json<int32_t>(json["id"])),
+            .time = detail::from_json<int32_t>(json["time"])
         };
     }
 
@@ -17,8 +17,8 @@ namespace mpp
     {
         return Quote
         {
-            .id = MessageId(detail::from_json(json["id"])),
-            .sender = UserId(detail::from_json(json["senderId"])),
+            .id = MessageId(detail::from_json<int32_t>(json["id"])),
+            .sender = UserId(json["senderId"].get_int64()),
             .msg = Message::from_json(json["origin"])
         };
     }

@@ -10,9 +10,9 @@ namespace mpp
 
     namespace
     {
-        UserId get_uid(const detail::JsonRes json) { return UserId(static_cast<int64_t>(json)); }
-        GroupId get_gid(const detail::JsonRes json) { return GroupId(static_cast<int64_t>(json)); }
-        MessageId get_mid(const detail::JsonRes json) { return MessageId(detail::from_json(json)); }
+        UserId get_uid(const detail::JsonRes json) { return UserId(json.get_int64()); }
+        GroupId get_gid(const detail::JsonRes json) { return GroupId(json.get_int64()); }
+        MessageId get_mid(const detail::JsonRes json) { return MessageId(detail::from_json<int32_t>(json)); }
     }
 
     clu::task<MessageId> FriendMessageEvent::async_send_message(
@@ -25,8 +25,8 @@ namespace mpp
     {
         return
         {
-            .msg = detail::from_json(json["messageChain"]),
-            .sender = detail::from_json(json["sender"])
+            .msg = SentMessage::from_json(json["messageChain"]),
+            .sender = Friend::from_json(json["sender"])
         };
     }
 
@@ -50,8 +50,8 @@ namespace mpp
     {
         return
         {
-            .msg = detail::from_json(json["messageChain"]),
-            .sender = detail::from_json(json["sender"])
+            .msg = SentMessage::from_json(json["messageChain"]),
+            .sender = Member::from_json(json["sender"])
         };
     }
 
@@ -65,8 +65,8 @@ namespace mpp
     {
         return
         {
-            .msg = detail::from_json(json["messageChain"]),
-            .sender = detail::from_json(json["sender"])
+            .msg = SentMessage::from_json(json["messageChain"]),
+            .sender = Member::from_json(json["sender"])
         };
     }
 
@@ -148,7 +148,7 @@ namespace mpp
             GroupExecutorEventBase::from_json(json),
             get_uid(json["authorId"]),
             get_mid(json["messageId"]),
-            detail::from_json(json["time"])
+            detail::from_json<int32_t>(json["time"])
         };
     }
 
@@ -163,7 +163,7 @@ namespace mpp
         {
             .sender_id = get_uid(json["authorId"]),
             .msg_id = get_mid(json["messageId"]),
-            .time = detail::from_json(json["time"])
+            .time = detail::from_json<int32_t>(json["time"])
         };
     }
 
@@ -172,8 +172,8 @@ namespace mpp
         return
         {
             GroupExecutorEventBase::from_json(json),
-            detail::from_json(json["origin"]),
-            detail::from_json(json["current"])
+            detail::from_json<std::string>(json["origin"]),
+            detail::from_json<std::string>(json["current"])
         };
     }
 
@@ -182,8 +182,8 @@ namespace mpp
         return
         {
             GroupExecutorEventBase::from_json(json),
-            detail::from_json(json["origin"]),
-            detail::from_json(json["current"])
+            detail::from_json<std::string>(json["origin"]),
+            detail::from_json<std::string>(json["current"])
         };
     }
 
@@ -207,8 +207,8 @@ namespace mpp
         {
             GroupExecutorEventBase::from_json(json),
             subtype,
-            detail::from_json(json["origin"]),
-            detail::from_json(json["current"])
+            json["origin"].get_bool(),
+            json["current"].get_bool()
         };
     }
 
@@ -232,8 +232,8 @@ namespace mpp
         return
         {
             MemberExecutorEventBase::from_json(json),
-            detail::from_json(json["origin"]),
-            detail::from_json(json["current"])
+            detail::from_json<std::string>(json["origin"]),
+            detail::from_json<std::string>(json["current"])
         };
     }
 
@@ -242,8 +242,8 @@ namespace mpp
         return
         {
             MemberEventBase::from_json(json),
-            detail::from_json(json["origin"]),
-            detail::from_json(json["current"])
+            detail::from_json<std::string>(json["origin"]),
+            detail::from_json<std::string>(json["current"])
         };
     }
 
@@ -275,11 +275,11 @@ namespace mpp
     {
         return
         {
-            .id = detail::from_json(json["eventId"]),
+            .id = json["eventId"].get_int64(),
             .from_id = get_uid(json["fromId"]),
             .group_id = get_gid(json["groupId"]),
-            .name = detail::from_json(json["nick"]),
-            .message = detail::from_json(json["message"])
+            .name = detail::from_json<std::string>(json["nick"]),
+            .message = detail::from_json<std::string>(json["message"])
         };
     }
 
@@ -287,12 +287,12 @@ namespace mpp
     {
         return
         {
-            .id = detail::from_json(json["eventId"]),
+            .id = json["eventId"].get_int64(),
             .from_id = get_uid(json["fromId"]),
             .group_id = get_gid(json["groupId"]),
-            .group_name = detail::from_json(json["groupName"]),
-            .name = detail::from_json(json["nick"]),
-            .message = detail::from_json(json["message"])
+            .group_name = detail::from_json<std::string>(json["groupName"]),
+            .name = detail::from_json<std::string>(json["nick"]),
+            .message = detail::from_json<std::string>(json["message"])
         };
     }
 
@@ -300,12 +300,12 @@ namespace mpp
     {
         return
         {
-            .id = detail::from_json(json["eventId"]),
+            .id = json["eventId"].get_int64(),
             .from_id = get_uid(json["fromId"]),
             .group_id = get_gid(json["groupId"]),
-            .group_name = detail::from_json(json["groupName"]),
-            .name = detail::from_json(json["nick"]),
-            .message = detail::from_json(json["message"])
+            .group_name = detail::from_json<std::string>(json["groupName"]),
+            .name = detail::from_json<std::string>(json["nick"]),
+            .message = detail::from_json<std::string>(json["message"])
         };
     }
 }

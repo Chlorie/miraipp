@@ -14,6 +14,7 @@ endfunction ()
 add_headers(HEADERS
     "core/bot.h"
     "core/common.h"
+    "core/config_types.h"
     "core/exceptions.h"
     "core/format.h"
     "core/info_types.h"
@@ -30,6 +31,7 @@ add_headers(HEADERS
 )
 add_sources(SOURCES
     "core/bot.cpp"
+    "core/config_types.cpp"
     "core/exceptions.cpp"
     "core/info_types.cpp"
     "detail/multipart_builder.cpp"

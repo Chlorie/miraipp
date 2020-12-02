@@ -43,8 +43,8 @@ namespace mpp
     {
         return
         {
-            .face_id = detail::from_json(json["faceId"]),
-            .name = detail::from_json(json["name"])
+            .face_id = detail::from_json<std::optional<uint32_t>>(json["faceId"]),
+            .name = detail::from_json<std::string>(json["name"])
         };
     }
 
@@ -76,9 +76,9 @@ namespace mpp
     {
         return
         {
-            .image_id = detail::from_json(json["imageId"]),
-            .url = detail::from_json(json["url"]),
-            .path = detail::from_json(json["path"])
+            .image_id = detail::from_json<std::optional<std::string>>(json["imageId"]),
+            .url = detail::from_json<std::optional<std::string>>(json["url"]),
+            .path = detail::from_json<std::optional<std::string>>(json["path"])
         };
     }
 
@@ -103,9 +103,9 @@ namespace mpp
     {
         return
         {
-            .image_id = detail::from_json(json["imageId"]),
-            .url = detail::from_json(json["url"]),
-            .path = detail::from_json(json["path"])
+            .image_id = detail::from_json<std::optional<std::string>>(json["imageId"]),
+            .url = detail::from_json<std::optional<std::string>>(json["url"]),
+            .path = detail::from_json<std::optional<std::string>>(json["path"])
         };
     }
 
@@ -130,9 +130,9 @@ namespace mpp
     {
         return
         {
-            .voice_id = detail::from_json(json["voiceId"]),
-            .url = detail::from_json(json["url"]),
-            .path = detail::from_json(json["path"])
+            .voice_id = detail::from_json<std::optional<std::string>>(json["voiceId"]),
+            .url = detail::from_json<std::optional<std::string>>(json["url"]),
+            .path = detail::from_json<std::optional<std::string>>(json["path"])
         };
     }
 

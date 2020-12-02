@@ -13,7 +13,7 @@ namespace mpp::detail
     void HttpSession::resume_with_error(const error_code ec)
     {
         ec_ = ec;
-        handle_();
+        awaiting_();
     }
 
     void HttpSession::on_connect(const error_code ec, const tcp::endpoint&)
@@ -37,12 +37,12 @@ namespace mpp::detail
         }
         stream_.socket().shutdown(tcp::socket::shutdown_both, ec);
         if (ec && ec != beast::errc::not_connected) ec_ = ec;
-        handle_();
+        awaiting_();
     }
 
     void HttpSession::await_suspend(const std::coroutine_handle<> handle)
     {
-        handle_ = handle;
+        awaiting_ = handle;
         stream_.async_connect(endpoints_,
             std::bind_front(&HttpSession::on_connect, this));
     }
@@ -62,6 +62,78 @@ namespace mpp::detail
         });
     }
 
+    void WebsocketSession::ConnectAwaiter::resume_with_error(const error_code ec)
+    {
+        ec_ = ec;
+        awaiting_();
+    }
+
+    void WebsocketSession::ConnectAwaiter::on_connect(const error_code ec, const tcp::endpoint& ep)
+    {
+        if (ec)
+        {
+            resume_with_error(ec);
+            return;
+        }
+        parent_.stream_.set_option(ws::stream_base::decorator([](ws::request_type& req)
+        {
+            req.set(http::field::user_agent,
+                BOOST_BEAST_VERSION_STRING);
+        }));
+
+        host_ += ':' + std::to_string(ep.port());
+        parent_.stream_.async_handshake(host_, target_,
+            std::bind_front(&ConnectAwaiter::resume_with_error, this));
+    }
+
+    void WebsocketSession::ConnectAwaiter::await_suspend(const std::coroutine_handle<> handle)
+    {
+        awaiting_ = handle;
+        get_lowest_layer(parent_.stream_).async_connect(eps_,
+            std::bind_front(&ConnectAwaiter::on_connect, this));
+    }
+
+    void WebsocketSession::ReadAwaiter::await_suspend(const std::coroutine_handle<> handle)
+    {
+        parent_.stream_.async_read(parent_.buffer_,
+            [=, this](const error_code ec, size_t)
+            {
+                ec_ = ec;
+                handle();
+            });
+    }
+
+    std::string WebsocketSession::ReadAwaiter::await_resume() const
+    {
+        const size_t size = parent_.buffer_.size();
+        std::string result(static_cast<const char*>(parent_.buffer_.data().data()), size);
+        parent_.buffer_.consume(size);
+        return result;
+    }
+
+    void WebsocketSession::CloseAwaiter::await_suspend(const std::coroutine_handle<> handle)
+    {
+        parent_.stream_.async_close(ws::normal,
+            [=, this](const error_code ec)
+            {
+                ec_ = ec;
+                handle();
+            });
+    }
+
+    WebsocketSession::~WebsocketSession() noexcept
+    {
+        if (stream_.is_open())
+            try { stream_.close(ws::normal); }
+            catch (...) { std::terminate(); }
+    }
+
+    WebsocketSession::ConnectAwaiter WebsocketSession::async_connect(
+        const std::string_view host, const endpoints& eps, const std::string_view target)
+    {
+        return ConnectAwaiter(*this, host, eps, target);
+    }
+
     request NetClient::generate_json_post_req(const std::string_view target, std::string&& body) const
     {
         http::request<http::string_body> req{ http::verb::post, to_beast_sv(target), 11 };
@@ -76,7 +148,7 @@ namespace mpp::detail
     NetClient::NetClient(const std::string_view host, const std::string_view port): host_(host)
     {
         tcp::resolver resolver(io_ctx_);
-        endpoints_ = resolver.resolve(host, port);
+        eps_ = resolver.resolve(host, port);
     }
 
     HttpSession NetClient::async_get(const std::string_view target)
@@ -84,12 +156,12 @@ namespace mpp::detail
         http::request<http::string_body> req{ http::verb::get, to_beast_sv(target), 11 };
         req.set(http::field::host, host_);
         req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        return HttpSession(io_ctx_, endpoints_, std::move(req));
+        return HttpSession(io_ctx_, eps_, std::move(req));
     }
 
     HttpSession NetClient::async_post_json(const std::string_view target, std::string&& body)
     {
-        return HttpSession(io_ctx_, endpoints_, 
+        return HttpSession(io_ctx_, eps_,
             generate_json_post_req(target, std::move(body)));
     }
 
@@ -98,7 +170,7 @@ namespace mpp::detail
         beast::tcp_stream stream(io_ctx_);
         beast::flat_buffer buffer;
         response result;
-        stream.connect(endpoints_);
+        stream.connect(eps_);
         http::write(stream, generate_json_post_req(target, std::move(body)));
         http::read(stream, buffer, result);
         error_code ec;

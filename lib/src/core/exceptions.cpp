@@ -1,5 +1,7 @@
 #include "mirai/core/exceptions.h"
 
+#include <iostream>
+
 namespace mpp
 {
     const char* get_description(const MiraiStatus code)
@@ -28,5 +30,12 @@ namespace mpp
     {
         if (code != MiraiStatus::success)
             throw MiraiException(code);
+    }
+
+    void log_exception()
+    {
+        try { throw; }
+        catch (const std::exception& exc) { std::cerr << "Caught exception: " << exc.what() << '\n'; }
+        catch (...) { std::cerr << "Unknown exception caught\n"; }
     }
 }

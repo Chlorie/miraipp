@@ -11,12 +11,12 @@ namespace mpp
 
     GroupEventBase GroupEventBase::from_json(const detail::JsonElem json)
     {
-        return { .group = detail::from_json(json["group"]) };
+        return { .group = Group::from_json(json["group"]) };
     }
 
     ExecutorEventBase ExecutorEventBase::from_json(const detail::JsonElem json)
     {
-        return { .executor = detail::from_json(json["operator"]) };
+        return { .executor = Member::from_json(json["operator"]) };
     }
 
     At GroupExecutorEventBase::at_executor() const { return At{ executor ? executor->id : bot().id() }; }
@@ -26,7 +26,7 @@ namespace mpp
         return
         {
             GroupEventBase::from_json(json),
-            detail::from_json(json["operator"])
+            Member::from_json(json["operator"])
         };
     }
 
@@ -48,7 +48,7 @@ namespace mpp
 
     MemberEventBase MemberEventBase::from_json(const detail::JsonElem json)
     {
-        return { .member = detail::from_json(json["member"]) };
+        return { .member = Member::from_json(json["member"]) };
     }
 
     At MemberExecutorEventBase::at_executor() const { return At{ executor ? executor->id : bot().id() }; }
@@ -58,7 +58,7 @@ namespace mpp
         return
         {
             MemberEventBase::from_json(json),
-            detail::from_json(json["operator"])
+            Member::from_json(json["operator"])
         };
     }
 }
