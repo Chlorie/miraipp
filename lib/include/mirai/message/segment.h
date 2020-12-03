@@ -15,6 +15,7 @@ namespace mpp
             virtual ~SegmentModel() noexcept = default;
             virtual std::unique_ptr<SegmentModel> clone() const = 0;
             virtual SegmentType type() const noexcept = 0;
+            virtual bool operator==(const SegmentModel&) const noexcept = 0;
             virtual void format_to(fmt::format_context& ctx) const = 0;
             virtual void format_as_json(fmt::format_context& ctx) const = 0;
         };
@@ -29,12 +30,17 @@ namespace mpp
             explicit SegmentModelImpl(const T& data): data_(data) {}
             explicit SegmentModelImpl(T&& data): data_(std::move(data)) {}
 
-            T& get() { return data_; }
+            T& get() noexcept { return data_; }
 
             std::unique_ptr<SegmentModel> clone() const override { return std::make_unique<SegmentModelImpl>(data_); }
             SegmentType type() const noexcept override { return T::type; }
             void format_to(fmt::format_context& ctx) const override { data_.format_to(ctx); }
             void format_as_json(fmt::format_context& ctx) const override { data_.format_as_json(ctx); }
+            bool operator==(const SegmentModel& base) const noexcept override
+            {
+                return base.type() == T::type
+                    && static_cast<const SegmentModelImpl<T>&>(base).data_ == data_;
+            }
         };
 
         std::unique_ptr<SegmentModel> impl_;
@@ -48,7 +54,7 @@ namespace mpp
             return static_cast<clu::copy_cvref_t<Self&&, T>>(ref);
         }
 
-        template <SegmentComponent T> T* get_if_impl() const
+        template <SegmentComponent T> T* get_if_impl() const noexcept
         {
             if (type() == T::type)
                 return &static_cast<SegmentModelImpl<T>*>(impl_.get())->get();
@@ -95,6 +101,25 @@ namespace mpp
 
         SegmentType type() const noexcept { return impl_->type(); }
 
+        bool operator==(const Segment& other) const noexcept { return *impl_ == *other.impl_; }
+
+        template <std::convertible_to<std::string_view> T>
+        bool operator==(const T& other) const noexcept
+        {
+            const std::string_view sv = other;
+            if (const auto* ptr = get_if<Plain>())
+                return ptr->text == sv;
+            return false;
+        }
+
+        template <SegmentComponent T>
+        bool operator==(const T& other) const noexcept
+        {
+            if (const T* ptr = get_if<T>())
+                return *ptr == other;
+            return false;
+        }
+
         template <SegmentComponent T> T& get() & { return get_impl<T>(*this); }
         template <SegmentComponent T> const T& get() const & { return get_impl<T>(*this); }
         template <SegmentComponent T> T&& get() && { return get_impl<T>(std::move(*this)); }
@@ -104,8 +129,8 @@ namespace mpp
         template <SegmentComponent T> explicit(false) operator T&&() && { return get_impl<T>(std::move(*this)); }
         template <SegmentComponent T> explicit(false) operator const T&&() const && { return get_impl<T>(std::move(*this)); }
 
-        template <SegmentComponent T> T* get_if() { return get_if_impl<T>(); }
-        template <SegmentComponent T> const T* get_if() const { return get_if_impl<T>(); }
+        template <SegmentComponent T> T* get_if() noexcept { return get_if_impl<T>(); }
+        template <SegmentComponent T> const T* get_if() const noexcept { return get_if_impl<T>(); }
 
         void format_to(fmt::format_context& ctx) const { impl_->format_to(ctx); }
         void format_as_json(fmt::format_context& ctx) const { impl_->format_as_json(ctx); }

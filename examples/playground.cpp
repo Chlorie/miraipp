@@ -9,7 +9,7 @@ clu::task<bool> repeat(const mpp::Event& ev)
     if (const auto* ptr = ev.get_if<mpp::FriendMessageEvent>())
     {
         const auto& msg = ptr->msg.content;
-        if (msg.collect_text() == "停停！") co_return true;
+        if (msg == "停停！") co_return true;
         co_await ptr->async_send_message(msg);
     }
     co_return false;

@@ -24,6 +24,12 @@ namespace mpp
         };
     }
 
+    bool Face::operator==(const Face& other) const noexcept
+    {
+        if (face_id.has_value() && face_id == other.face_id) return true;
+        return name == other.name;
+    }
+
     void Face::format_to(fmt::format_context& ctx) const
     {
         if (name) return (void)fmt::format_to(ctx.out(), "[表情 {}]", *name);
@@ -55,6 +61,13 @@ namespace mpp
         obj.add_entry("text", text);
     }
 
+    bool Image::operator==(const Image& other) const noexcept
+    {
+        if (image_id.has_value() && image_id == other.image_id) return true;
+        if (url.has_value() && url == other.url) return true;
+        return path == other.path;
+    }
+
     void Image::format_to(fmt::format_context& ctx) const
     {
         if (image_id) return (void)fmt::format_to(ctx.out(), "{}", *image_id);
@@ -82,6 +95,13 @@ namespace mpp
         };
     }
 
+    bool FlashImage::operator==(const FlashImage& other) const noexcept
+    {
+        if (image_id.has_value() && image_id == other.image_id) return true;
+        if (url.has_value() && url == other.url) return true;
+        return path == other.path;
+    }
+
     void FlashImage::format_to(fmt::format_context& ctx) const
     {
         if (image_id) return (void)fmt::format_to(ctx.out(), "[图片 {}]", *image_id);
@@ -107,6 +127,13 @@ namespace mpp
             .url = detail::from_json<std::optional<std::string>>(json["url"]),
             .path = detail::from_json<std::optional<std::string>>(json["path"])
         };
+    }
+
+    bool Voice::operator==(const Voice& other) const noexcept
+    {
+        if (voice_id.has_value() && voice_id == other.voice_id) return true;
+        if (url.has_value() && url == other.url) return true;
+        return path == other.path;
     }
 
     void Voice::format_to(fmt::format_context& ctx) const

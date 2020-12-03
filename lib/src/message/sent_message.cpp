@@ -17,9 +17,9 @@ namespace mpp
     {
         return Quote
         {
-            .id = MessageId(detail::from_json<int32_t>(json["id"])),
-            .sender = UserId(json["senderId"].get_int64()),
-            .msg = Message::from_json(json["origin"])
+            MessageId(detail::from_json<int32_t>(json["id"])),
+            UserId(json["senderId"].get_int64()),
+            Message::from_json(json["origin"])
         };
     }
 
