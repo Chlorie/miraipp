@@ -271,6 +271,12 @@ namespace mpp
         return { MemberExecutorEventBase::from_json(json) };
     }
 
+    clu::task<> NewFriendRequestEvent::async_respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        return bot().async_respond(*this, response, reason);
+    }
+
     NewFriendRequestEvent NewFriendRequestEvent::from_json(const detail::JsonElem json)
     {
         return
@@ -281,6 +287,12 @@ namespace mpp
             .name = detail::from_json<std::string>(json["nick"]),
             .message = detail::from_json<std::string>(json["message"])
         };
+    }
+
+    clu::task<> MemberJoinRequestEvent::async_respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        return bot().async_respond(*this, response, reason);
     }
 
     MemberJoinRequestEvent MemberJoinRequestEvent::from_json(const detail::JsonElem json)
@@ -294,6 +306,12 @@ namespace mpp
             .name = detail::from_json<std::string>(json["nick"]),
             .message = detail::from_json<std::string>(json["message"])
         };
+    }
+
+    clu::task<> BotInvitedJoinGroupRequestEvent::async_respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        return bot().async_respond(*this, response, reason);
     }
 
     BotInvitedJoinGroupRequestEvent BotInvitedJoinGroupRequestEvent::from_json(const detail::JsonElem json)

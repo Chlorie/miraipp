@@ -9,19 +9,12 @@
 
 #include "common.h"
 #include "config_types.h"
+#include "../event/event.h"
 #include "../detail/net_client.h"
 #include "../detail/json.h"
 
 namespace mpp
 {
-    class Message;
-    class Event;
-    struct Image;
-    struct Voice;
-    struct Friend;
-    struct Group;
-    struct Member;
-
     /// Mirai++ 中功能的核心类型，代表 mirai-api-http 中的一个会话。此类不可复制或移动。
     class Bot final
     {
@@ -191,8 +184,12 @@ namespace mpp
         clu::task<> async_kick(GroupId group, UserId user, std::string_view reason);
         clu::task<> async_quit(GroupId group);
 
-        // clu::task<> async_respond(const NewFriendRequestEvent& event, NewFriendResponseType type, std::string_view reason);
-        // clu::task<> async_respond(const MemberJoinRequestEvent& event, MemberJoinResponseType type, std::string_view reason);
+        clu::task<> async_respond(
+            const NewFriendRequestEvent& ev, NewFriendResponseType type, std::string_view reason);
+        clu::task<> async_respond(
+            const MemberJoinRequestEvent& ev, MemberJoinResponseType type, std::string_view reason);
+        clu::task<> async_respond(
+            const BotInvitedJoinGroupRequestEvent& ev, BotInvitedJoinGroupResponseType type, std::string_view reason);
 
         // clu::task<GroupConfig> async_get_group_config(GroupId group);
         // clu::task<> async_config_group(GroupId group, const GroupConfig& config);

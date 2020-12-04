@@ -90,7 +90,7 @@ namespace mpp
     struct TempMessageEvent final : EventBase
     {
         static constexpr EventType type = EventType::temp_message;
-        
+
         SentMessage msg; ///< 收到的消息
         Member sender; ///< 消息的发送者
 
@@ -214,11 +214,11 @@ namespace mpp
     struct FriendRecallEvent final : EventBase
     {
         static constexpr EventType type = EventType::friend_recall;
-        
+
         UserId sender_id; ///< 被撤回消息的发送者 QQ 号
         MessageId msg_id; ///< 被撤回消息的 id
         int32_t time{}; ///< 被撤回消息发送的时间
-        
+
         /**
          * \brief 异步地引用回复被撤回的消息
          * \param message 消息内容
@@ -330,7 +330,7 @@ namespace mpp
 
         static MemberMutedEvent from_json(detail::JsonElem json);
     };
-    
+
     /// 成员被解禁事件
     struct MemberUnmutedEvent final : MemberExecutorEventBase
     {
@@ -344,20 +344,32 @@ namespace mpp
     {
         static constexpr EventType type = EventType::new_friend_request;
 
+        enum class ResponseType : uint8_t { approve = 0, reject = 1, reject_and_blacklist = 2 };
+
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
         GroupId group_id; ///< 申请人通过何群加好友
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
+        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+
         static NewFriendRequestEvent from_json(detail::JsonElem json);
     };
+
+    using NewFriendResponseType = NewFriendRequestEvent::ResponseType;
 
     /// 加群申请事件
     struct MemberJoinRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::member_join_request;
 
+        enum class ResponseType : uint8_t
+        {
+            approve = 0, reject = 1, ignore = 2,
+            reject_and_blacklist = 3, ignore_and_blacklist = 4
+        };
+
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
         GroupId group_id; ///< 申请加入的群
@@ -365,14 +377,20 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
+        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+
         static MemberJoinRequestEvent from_json(detail::JsonElem json);
     };
+
+    using MemberJoinResponseType = MemberJoinRequestEvent::ResponseType;
 
     /// Bot 被邀请入群事件
     struct BotInvitedJoinGroupRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::bot_invited_join_group_request;
 
+        enum class ResponseType : uint8_t { approve = 0, reject = 1 };
+
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
         GroupId group_id; ///< 申请加入的群
@@ -380,6 +398,10 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
+        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+
         static BotInvitedJoinGroupRequestEvent from_json(detail::JsonElem json);
     };
+
+    using BotInvitedJoinGroupResponseType = BotInvitedJoinGroupRequestEvent::ResponseType;
 }

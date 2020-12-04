@@ -383,6 +383,57 @@ namespace mpp
             "/quit", group_target_body(group)));
     }
 
+    clu::task<> Bot::async_respond(
+        const NewFriendRequestEvent& ev, const NewFriendResponseType type, const std::string_view reason)
+    {
+        auto body = detail::perform_format([&](fmt::format_context& ctx)
+        {
+            detail::JsonObjScope scope(ctx);
+            scope.add_entry("sessionKey", sess_key_);
+            scope.add_entry("eventId", ev.id);
+            scope.add_entry("fromId", ev.from_id);
+            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("operate", static_cast<uint64_t>(type));
+            scope.add_entry("message", reason);
+        });
+        (void)get_checked_response_json(
+            co_await net_client_.async_post_json("/resp/newFriendRequestEvent", std::move(body)));
+    }
+
+    clu::task<> Bot::async_respond(
+        const MemberJoinRequestEvent& ev, const MemberJoinResponseType type, const std::string_view reason)
+    {
+        auto body = detail::perform_format([&](fmt::format_context& ctx)
+        {
+            detail::JsonObjScope scope(ctx);
+            scope.add_entry("sessionKey", sess_key_);
+            scope.add_entry("eventId", ev.id);
+            scope.add_entry("fromId", ev.from_id);
+            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("operate", static_cast<uint64_t>(type));
+            scope.add_entry("message", reason);
+        });
+        (void)get_checked_response_json(
+            co_await net_client_.async_post_json("/resp/memberJoinRequestEvent", std::move(body)));
+    }
+
+    clu::task<> Bot::async_respond(
+        const BotInvitedJoinGroupRequestEvent& ev, const BotInvitedJoinGroupResponseType type, const std::string_view reason)
+    {
+        auto body = detail::perform_format([&](fmt::format_context& ctx)
+        {
+            detail::JsonObjScope scope(ctx);
+            scope.add_entry("sessionKey", sess_key_);
+            scope.add_entry("eventId", ev.id);
+            scope.add_entry("fromId", ev.from_id);
+            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("operate", static_cast<uint64_t>(type));
+            scope.add_entry("message", reason);
+        });
+        (void)get_checked_response_json(
+            co_await net_client_.async_post_json("/resp/botInvitedJoinGroupRequestEvent", std::move(body)));
+    }
+
     clu::task<> Bot::async_monitor_events(const clu::function_ref<clu::task<bool>(const Event&)> callback)
     {
         detail::WebsocketSession ws = net_client_.get_ws_session();
