@@ -15,11 +15,13 @@ namespace mpp
 
     Quote Quote::from_json(const detail::JsonElem json)
     {
+        SentMessage sent = SentMessage::from_json(json["origin"]);
         return Quote
         {
             MessageId(detail::from_json<int32_t>(json["id"])),
             UserId(json["senderId"].get_int64()),
-            Message::from_json(json["origin"])
+            sent.source.time,
+            std::move(sent.content)
         };
     }
 

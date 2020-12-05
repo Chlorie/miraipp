@@ -391,8 +391,8 @@ namespace mpp
             detail::JsonObjScope scope(ctx);
             scope.add_entry("sessionKey", sess_key_);
             scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id);
-            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("fromId", ev.from_id.id);
+            scope.add_entry("groupId", ev.group_id.id);
             scope.add_entry("operate", static_cast<uint64_t>(type));
             scope.add_entry("message", reason);
         });
@@ -408,8 +408,8 @@ namespace mpp
             detail::JsonObjScope scope(ctx);
             scope.add_entry("sessionKey", sess_key_);
             scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id);
-            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("fromId", ev.from_id.id);
+            scope.add_entry("groupId", ev.group_id.id);
             scope.add_entry("operate", static_cast<uint64_t>(type));
             scope.add_entry("message", reason);
         });
@@ -425,8 +425,8 @@ namespace mpp
             detail::JsonObjScope scope(ctx);
             scope.add_entry("sessionKey", sess_key_);
             scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id);
-            scope.add_entry("groupId", ev.group_id);
+            scope.add_entry("fromId", ev.from_id.id);
+            scope.add_entry("groupId", ev.group_id.id);
             scope.add_entry("operate", static_cast<uint64_t>(type));
             scope.add_entry("message", reason);
         });
@@ -447,9 +447,11 @@ namespace mpp
             try
             {
                 auto json = parser.parse(co_await ws.async_read());
+                if (close.load(std::memory_order_acquire)) break;
                 check_json(json);
                 scope.spawn([&](const Event ev) -> clu::task<>
                 {
+                    if (co_await pm_queue_.async_match_event(ev)) co_return;
                     const bool result = co_await callback(ev);
                     close.store(result, std::memory_order_release);
                 }(parse_event(json.value())));
@@ -475,9 +477,9 @@ namespace mpp
 
     clu::task<> Bot::async_config(SessionConfig config)
     {
-        const auto cache_size = 
+        const auto cache_size =
             config.cache_size ? clu::optional_param<int32_t>(*config.cache_size) : std::nullopt;
-        const auto enable_websocket = 
+        const auto enable_websocket =
             config.enable_websocket ? clu::optional_param<bool>(*config.enable_websocket) : std::nullopt;
         return async_config(cache_size, enable_websocket);
     }

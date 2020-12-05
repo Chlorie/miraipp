@@ -21,7 +21,7 @@ namespace mpp
     /// 事件组成类型概念
     template <typename T>
     concept EventComponent = std::derived_from<T, EventBase>
-        && requires { {T::type} -> std::convertible_to<EventType>; };
+        && requires { { T::type } -> std::convertible_to<EventType>; };
     // @formatter:on
 
     /// 私聊消息事件
@@ -118,7 +118,7 @@ namespace mpp
         static constexpr EventType type = EventType::bot_online;
 
         enum class SubType : uint8_t { login, relogin }; ///< 事件的子类型枚举
-        SubType subtype; ///< 事件的子类型
+        SubType subtype{}; ///< 事件的子类型
         UserId id; ///< 上线 bot 的 QQ 号
 
         static BotOnlineEvent from_json(detail::JsonElem json);

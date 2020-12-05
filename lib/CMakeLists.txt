@@ -28,6 +28,9 @@ add_headers(HEADERS
     "message/segment.h"
     "message/segment_types.h"
     "message/sent_message.h"
+    "pattern/pattern.h"
+    "pattern/pattern_awaiter.h"
+    "pattern/pattern_types.h"
 )
 add_sources(SOURCES
     "core/bot.cpp"
@@ -43,6 +46,7 @@ add_sources(SOURCES
     "message/segment.cpp"
     "message/segment_types.cpp"
     "message/sent_message.cpp"
+    "pattern/pattern_awaiter.cpp"
 )
 
 find_package(clu CONFIG REQUIRED)

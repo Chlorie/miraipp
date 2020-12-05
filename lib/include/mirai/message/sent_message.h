@@ -17,6 +17,7 @@ namespace mpp
     {
         MessageId id;
         UserId sender;
+        int32_t time = 0;
         Message msg;
 
         bool operator==(const Quote& other) const noexcept { return id == other.id; }

@@ -9,9 +9,10 @@
 
 #include "common.h"
 #include "config_types.h"
-#include "../event/event.h"
 #include "../detail/net_client.h"
 #include "../detail/json.h"
+#include "../event/event.h"
+#include "../pattern/pattern_awaiter.h"
 
 namespace mpp
 {
@@ -25,6 +26,7 @@ namespace mpp
         detail::NetClient net_client_;
         UserId bot_id_;
         std::string sess_key_;
+        PatternMatcherQueue pm_queue_;
 
         std::string release_body() const;
         std::string send_message_body(int64_t id, const Message& message, clu::optional_param<MessageId> quote) const;
@@ -209,6 +211,24 @@ namespace mpp
         clu::task<> async_config(clu::optional_param<int32_t> cache_size = {}, clu::optional_param<bool> enable_websocket = {});
 
         clu::task<> async_config(SessionConfig config);
+
+        template <EventComponent E, PatternFor<E>... Ps>
+        clu::task<const E&> async_match(Ps&&... patterns)
+        {
+            co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
+        }
+
+        // template <EventComponent E, PatternFor<E>... Ps>
+        // clu::task<clu::optional_ref<const E>> async_match(const Clock::time_point deadline, Ps&&... patterns)
+        // {
+        //     co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
+        // }
+        // 
+        // template <EventComponent E, PatternFor<E>... Ps>
+        // clu::task<clu::optional_ref<const E>> async_match(const Clock::duration timeout, Ps&&... patterns)
+        // {
+        //     co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
+        // }
 
         /**
          * \brief 异步等待直到某时间点
