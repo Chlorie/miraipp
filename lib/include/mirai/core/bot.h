@@ -4,8 +4,9 @@
 #include <span>
 #include <clu/function_ref.h>
 #include <clu/optional_ref.h>
-#include <clu/coroutine/task.h>
 #include <clu/coroutine/coroutine_scope.h>
+#include <clu/coroutine/task.h>
+#include <clu/coroutine/race.h>
 
 #include "common.h"
 #include "config_types.h"
@@ -213,22 +214,26 @@ namespace mpp
         clu::task<> async_config(SessionConfig config);
 
         template <EventComponent E, PatternFor<E>... Ps>
-        clu::task<const E&> async_match(Ps&&... patterns)
+        clu::task<E> async_match(Ps&&... patterns)
         {
             co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
         }
 
-        // template <EventComponent E, PatternFor<E>... Ps>
-        // clu::task<clu::optional_ref<const E>> async_match(const Clock::time_point deadline, Ps&&... patterns)
-        // {
-        //     co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
-        // }
-        // 
-        // template <EventComponent E, PatternFor<E>... Ps>
-        // clu::task<clu::optional_ref<const E>> async_match(const Clock::duration timeout, Ps&&... patterns)
-        // {
-        //     co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
-        // }
+        template <EventComponent E, PatternFor<E>... Ps>
+        clu::task<std::optional<E>> async_match(const Clock::time_point deadline, Ps&&... patterns)
+        {
+            const auto res = co_await clu::race(
+                pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...),
+                async_wait(deadline));
+            if (res.index() == 0) co_return *clu::get<0>(res);
+            co_return std::nullopt;
+        }
+
+        template <EventComponent E, PatternFor<E>... Ps>
+        clu::task<std::optional<E>> async_match(const Clock::duration timeout, Ps&&... patterns)
+        {
+            return async_match<E>(Clock::now() + timeout, std::forward<Ps>(patterns)...);
+        }
 
         /**
          * \brief 异步等待直到某时间点

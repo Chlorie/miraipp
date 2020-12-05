@@ -9,9 +9,11 @@ using namespace mpp::literals;
 clu::task<> test_match(mpp::Bot& bot)
 {
     const auto id = co_await bot.async_send_message(1357008522_uid, "等你个回复");
-    auto&& ev = co_await bot.async_match<mpp::FriendMessageEvent>(
-        from(1357008522_uid), replying(id));
-    co_await ev.async_quote_reply("感谢回复！");
+    if (const auto reply = co_await bot.async_match<mpp::FriendMessageEvent>(15s,
+        from(1357008522_uid), replying(id)))
+        co_await reply->async_quote_reply("感谢回复！");
+    else
+        co_await bot.async_send_message(1357008522_uid, "为什么不回消息啊……");
 }
 
 clu::task<bool> wait_stop(const mpp::Event& ev)

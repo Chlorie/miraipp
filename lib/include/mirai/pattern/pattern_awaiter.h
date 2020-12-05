@@ -23,6 +23,7 @@ namespace mpp
         public:
             virtual ~ItemModel() noexcept = default;
             bool done() const noexcept { return done_.load(std::memory_order_relaxed); }
+            bool set_done() noexcept { return done_.exchange(true, std::memory_order_release); }
             bool match(const Event& ev) { return do_match(ev); }
         };
 
@@ -35,7 +36,6 @@ namespace mpp
                 friend class ItemImpl;
 
             private:
-                std::coroutine_handle<> handle_{};
                 PatternMatcherQueue* queue_;
                 std::unique_ptr<ItemImpl> item_;
                 ItemModel* enqueued_item_ = nullptr;
@@ -48,11 +48,15 @@ namespace mpp
 
                     void await_suspend(const std::coroutine_handle<> handle) const
                     {
-                        parent.handle_ = handle;
+                        static_cast<ItemImpl*>(parent.enqueued_item_)->handle_ = handle;
                         parent.queue_->mutex_.unlock();
                     }
 
-                    const E* await_resume() const noexcept { return static_cast<ItemImpl*>(parent.enqueued_item_)->ev_; }
+                    std::optional<E> await_resume() const noexcept
+                    {
+                        ItemImpl* impl = static_cast<ItemImpl*>(parent.enqueued_item_);
+                        return std::move(impl->event_);
+                    }
                 };
 
             public:
@@ -60,7 +64,7 @@ namespace mpp
                 explicit Awaitable(PatternMatcherQueue* queue, Qs&&... ptns):
                     queue_(queue), item_(std::make_unique<ItemImpl>(std::forward<Qs>(ptns)...)) {}
 
-                clu::task<const E*> operator co_await()
+                clu::task<std::optional<E>> operator co_await()
                 {
                     co_await queue_->mutex_.async_lock();
                     auto _ = clu::scope_fail([&] { queue_->mutex_.unlock(); });
@@ -71,14 +75,16 @@ namespace mpp
                     co_return co_await Awaiter(*this);
                 }
 
-                // void cancel()
-                // {
-                //     
-                // }
+                void cancel()
+                {
+                    if (!enqueued_item_->set_done())
+                        static_cast<ItemImpl*>(enqueued_item_)->handle_.resume();
+                }
             };
 
         private:
-            const E* ev_ = nullptr;
+            std::optional<E> event_;
+            std::coroutine_handle<> handle_{};
             std::atomic<Awaitable*> awaitable_;
             std::tuple<Ps...> patterns_;
 
@@ -88,9 +94,12 @@ namespace mpp
                 const E* ptr = ev.get_if<E>();
                 if (ptr && std::apply([&](const Ps&... ps) { return match_with(*ptr, ps...); }, patterns_))
                 {
-                    ev_ = ptr;
-                    awaitable_.load(std::memory_order_acquire)->handle_.resume();
-                    return true;
+                    event_ = std::move(*ptr);
+                    if (!set_done())
+                    {
+                        handle_.resume();
+                        return true;
+                    }
                 }
                 return false;
             }
