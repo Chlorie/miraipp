@@ -1,35 +1,15 @@
 #pragma once
 
+#include "event.h"
 #include "event_bases.h"
 
 namespace mpp
 {
-    /// 事件类型枚举
-    enum class EventType : uint8_t
-    {
-        friend_message, group_message, temp_message,
-        bot_online, bot_offline,
-        bot_group_permission_change, bot_muted, bot_unmuted, bot_join_group, bot_quit, bot_kicked,
-        group_recall, friend_recall,
-        group_name_change, group_entrance_announcement_change, group_config,
-        member_join, member_quit, member_kicked, member_card_change, member_special_title_change,
-        member_permission_change, member_muted, member_unmuted,
-        new_friend_request, member_join_request, bot_invited_join_group_request
-    };
-
-    // @formatter:off
-    /// 事件组成类型概念
-    template <typename T>
-    concept EventComponent = std::derived_from<T, EventBase>
-        && requires { { T::type } -> std::convertible_to<EventType>; };
-    // @formatter:on
-
     /// 私聊消息事件
-    struct FriendMessageEvent final : EventBase
+    struct FriendMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::friend_message;
 
-        SentMessage msg; ///< 收到的消息
         Friend sender; ///< 消息的发送者
 
         /**
@@ -51,11 +31,10 @@ namespace mpp
     };
 
     /// 群聊消息事件
-    struct GroupMessageEvent final : EventBase
+    struct GroupMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::group_message;
 
-        SentMessage msg; ///< 收到的消息
         Member sender; ///< 消息的发送者
 
         At at_sender() const { return At{ sender.id }; } ///< 获取对象为消息发送者的 at 消息段
@@ -87,11 +66,10 @@ namespace mpp
     };
 
     /// 临时会话消息事件
-    struct TempMessageEvent final : EventBase
+    struct TempMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::temp_message;
 
-        SentMessage msg; ///< 收到的消息
         Member sender; ///< 消息的发送者
 
         /**
@@ -339,12 +317,14 @@ namespace mpp
         static MemberUnmutedEvent from_json(detail::JsonElem json);
     };
 
+    enum class NewFriendResponseType : uint8_t { approve = 0, reject = 1, reject_and_blacklist = 2 };
+
     /// 加好友申请事件
     struct NewFriendRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::new_friend_request;
 
-        enum class ResponseType : uint8_t { approve = 0, reject = 1, reject_and_blacklist = 2 };
+        using ResponseType = NewFriendResponseType;
 
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
@@ -357,18 +337,18 @@ namespace mpp
         static NewFriendRequestEvent from_json(detail::JsonElem json);
     };
 
-    using NewFriendResponseType = NewFriendRequestEvent::ResponseType;
+    enum class MemberJoinResponseType : uint8_t
+    {
+        approve = 0, reject = 1, ignore = 2,
+        reject_and_blacklist = 3, ignore_and_blacklist = 4
+    };
 
     /// 加群申请事件
     struct MemberJoinRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::member_join_request;
 
-        enum class ResponseType : uint8_t
-        {
-            approve = 0, reject = 1, ignore = 2,
-            reject_and_blacklist = 3, ignore_and_blacklist = 4
-        };
+        using ResponseType = MemberJoinResponseType;
 
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
@@ -382,14 +362,14 @@ namespace mpp
         static MemberJoinRequestEvent from_json(detail::JsonElem json);
     };
 
-    using MemberJoinResponseType = MemberJoinRequestEvent::ResponseType;
+    enum class BotInvitedJoinGroupResponseType : uint8_t { approve = 0, reject = 1 };
 
     /// Bot 被邀请入群事件
     struct BotInvitedJoinGroupRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::bot_invited_join_group_request;
 
-        enum class ResponseType : uint8_t { approve = 0, reject = 1 };
+        using ResponseType = BotInvitedJoinGroupResponseType;
 
         int64_t id{}; ///< 事件 id
         UserId from_id; ///< 申请人的 QQ 号
@@ -402,6 +382,4 @@ namespace mpp
 
         static BotInvitedJoinGroupRequestEvent from_json(detail::JsonElem json);
     };
-
-    using BotInvitedJoinGroupResponseType = BotInvitedJoinGroupRequestEvent::ResponseType;
 }

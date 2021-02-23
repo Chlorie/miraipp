@@ -3,6 +3,11 @@
 
 namespace mpp
 {
+    MessageEventBase MessageEventBase::from_json(const detail::JsonElem json)
+    {
+        return { .msg = SentMessage::from_json(json["messageChain"]) };
+    }
+
     clu::task<MessageId> GroupEventBase::async_send_message(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {

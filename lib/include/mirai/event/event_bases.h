@@ -3,23 +3,21 @@
 #include <clu/coroutine/task.h>
 #include <clu/optional_ref.h>
 
+#include "event.h"
 #include "../core/info_types.h"
 #include "../message/sent_message.h"
 
 namespace mpp
 {
-    class Bot;
-
-    /// 事件基类
-    class EventBase
+    /// 消息事件基类
+    struct MessageEventBase : EventBase
     {
-        friend class Bot;
-    private:
-        Bot* bot_ = nullptr;
+        SentMessage msg; ///< 收到的消息
 
-    public:
-        constexpr EventBase() noexcept = default;
-        Bot& bot() const noexcept { return *bot_; } ///< 获取指向收到该事件的 bot 的引用
+        MessageId msgid() const noexcept { return msg.source.id; } ///< 消息的 id
+        const Message& content() const noexcept { return msg.content; } ///< 消息内容
+
+        static MessageEventBase from_json(detail::JsonElem json);
     };
 
     /// 群事件基类

@@ -3,7 +3,8 @@
 #include <memory>
 #include <clu/type_traits.h>
 
-#include "event_types.h"
+#include "event_base.h"
+#include "../detail/json.h"
 
 namespace mpp
 {
@@ -39,7 +40,7 @@ namespace mpp
 
         std::unique_ptr<EventModel> impl_;
 
-        template <EventComponent T, typename Self>
+        template <ConcreteEvent T, typename Self>
         static decltype(auto) get_impl(Self&& self)
         {
             if (self.type() != T::type)
@@ -48,7 +49,8 @@ namespace mpp
             return static_cast<clu::copy_cvref_t<Self&&, T>>(ref);
         }
 
-        template <EventComponent T> T* get_if_impl() const
+        template <ConcreteEvent T>
+        T* get_if_impl() const
         {
             if (type() == T::type)
                 return &static_cast<EventModelImpl<T>*>(impl_.get())->get();
@@ -60,7 +62,7 @@ namespace mpp
         EventBase& event_base() const noexcept { return impl_->event_base(); }
 
     public:
-        template <typename T> requires EventComponent<std::remove_cvref_t<T>>
+        template <typename T> requires ConcreteEvent<std::remove_cvref_t<T>>
         explicit(false) Event(T&& ev): // NOLINT(bugprone-forwarding-reference-overload)
             impl_(std::make_unique<EventModelImpl<std::remove_cvref_t<T>>>(std::forward<T>(ev))) {}
 
@@ -79,17 +81,13 @@ namespace mpp
 
         EventType type() const noexcept { return impl_->type(); }
 
-        template <EventComponent T> T& get() & { return get_impl<T>(*this); }
-        template <EventComponent T> const T& get() const & { return get_impl<T>(*this); }
-        template <EventComponent T> T&& get() && { return get_impl<T>(std::move(*this)); }
-        template <EventComponent T> const T&& get() const && { return get_impl<T>(std::move(*this)); }
-        template <EventComponent T> explicit(false) operator T&() & { return get_impl<T>(*this); }
-        template <EventComponent T> explicit(false) operator const T&() const & { return get_impl<T>(*this); }
-        template <EventComponent T> explicit(false) operator T&&() && { return get_impl<T>(std::move(*this)); }
-        template <EventComponent T> explicit(false) operator const T&&() const && { return get_impl<T>(std::move(*this)); }
+        template <ConcreteEvent T> T& get() & { return get_impl<T>(*this); }
+        template <ConcreteEvent T> const T& get() const & { return get_impl<T>(*this); }
+        template <ConcreteEvent T> T&& get() && { return get_impl<T>(std::move(*this)); }
+        template <ConcreteEvent T> const T&& get() const && { return get_impl<T>(std::move(*this)); }
 
-        template <EventComponent T> T* get_if() { return get_if_impl<T>(); }
-        template <EventComponent T> const T* get_if() const { return get_if_impl<T>(); }
+        template <ConcreteEvent T> T* get_if() { return get_if_impl<T>(); }
+        template <ConcreteEvent T> const T* get_if() const { return get_if_impl<T>(); }
 
         Bot& bot() const { return impl_->bot(); }
 

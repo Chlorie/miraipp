@@ -25,8 +25,8 @@ namespace mpp
     {
         return
         {
-            .msg = SentMessage::from_json(json["messageChain"]),
-            .sender = Friend::from_json(json["sender"])
+            MessageEventBase::from_json(json),
+            Friend::from_json(json["sender"])
         };
     }
 
@@ -50,8 +50,8 @@ namespace mpp
     {
         return
         {
-            .msg = SentMessage::from_json(json["messageChain"]),
-            .sender = Member::from_json(json["sender"])
+            MessageEventBase::from_json(json),
+            Member::from_json(json["sender"])
         };
     }
 
@@ -65,8 +65,8 @@ namespace mpp
     {
         return
         {
-            .msg = SentMessage::from_json(json["messageChain"]),
-            .sender = Member::from_json(json["sender"])
+            MessageEventBase::from_json(json),
+            Member::from_json(json["sender"])
         };
     }
 

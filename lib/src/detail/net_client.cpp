@@ -1,5 +1,10 @@
 #include "mirai/detail/net_client.h"
 
+#ifdef __RESHARPER__ // Resharper incorrect _MSC_VER workaround
+#   define BOOST_ASIO_HAS_CO_AWAIT 1
+#endif
+#include <boost/asio/use_awaitable.hpp>
+
 namespace mpp::detail
 {
     namespace
@@ -60,6 +65,15 @@ namespace mpp::detail
             ec_ = ec;
             handle.resume();
         });
+    }
+
+    bool WaitUntilAwaitable::await_resume() const
+    {
+        if (ec_ == boost::system::errc::operation_canceled)
+            return false;
+        else if (ec_)
+            throw boost::system::system_error(ec_);
+        return true;
     }
 
     void WebsocketSession::ConnectAwaiter::resume_with_error(const error_code ec)

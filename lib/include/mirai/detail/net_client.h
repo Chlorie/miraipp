@@ -59,7 +59,7 @@ namespace mpp::detail
 
         bool await_ready() const noexcept { return false; }
         void await_suspend(std::coroutine_handle<> handle);
-        void await_resume() const { throw_on_error(ec_); }
+        bool await_resume() const;
 
         void cancel() { timer_.cancel(); }
     };

@@ -1,11 +1,12 @@
 #include "mirai/core/bot.h"
 
 #include <simdjson.h>
+#include <clu/coroutine/coroutine_scope.h>
 
 #include "mirai/core/exceptions.h"
 #include "mirai/message/message.h"
 #include "mirai/detail/multipart_builder.h"
-#include "mirai/event/event.h"
+#include "mirai/event/event_types.h"
 
 namespace mpp
 {
@@ -320,10 +321,10 @@ namespace mpp
         co_return detail::from_json<std::vector<Group>>(json["data"]);
     }
 
-    clu::task<std::vector<Member>> Bot::async_list_members(GroupId id)
+    clu::task<std::vector<Member>> Bot::async_list_members(const GroupId id)
     {
         const auto json = get_checked_response_json(co_await net_client_.async_get(
-            fmt::format("/memberList?sessionKey={}", sess_key_)));
+            fmt::format("/memberList?sessionKey={}&target={}", sess_key_, id.id)));
         co_return detail::from_json<std::vector<Member>>(json["data"]);
     }
 
@@ -451,9 +452,13 @@ namespace mpp
                 check_json(json);
                 scope.spawn([&](const Event ev) -> clu::task<>
                 {
-                    if (co_await pm_queue_.async_match_event(ev)) co_return;
-                    const bool result = co_await callback(ev);
-                    close.store(result, std::memory_order_release);
+                    try
+                    {
+                        if (co_await pm_queue_.async_match_event(ev)) co_return;
+                        const bool result = co_await callback(ev);
+                        close.store(result, std::memory_order_release);
+                    }
+                    catch (...) { log_exception(); }
                 }(parse_event(json.value())));
             }
             catch (...) { log_exception(); }
@@ -475,12 +480,5 @@ namespace mpp
         (void)get_checked_response_json(co_await net_client_.async_post_json("/config", std::move(body)));
     }
 
-    clu::task<> Bot::async_config(SessionConfig config)
-    {
-        const auto cache_size =
-            config.cache_size ? clu::optional_param<int32_t>(*config.cache_size) : std::nullopt;
-        const auto enable_websocket =
-            config.enable_websocket ? clu::optional_param<bool>(*config.enable_websocket) : std::nullopt;
-        return async_config(cache_size, enable_websocket);
-    }
+    clu::task<> Bot::async_config(const SessionConfig config) { return async_config(config.cache_size, config.enable_websocket); }
 }

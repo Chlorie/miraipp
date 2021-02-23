@@ -4,7 +4,9 @@ cmake_minimum_required(VERSION 3.13)
 
 project(miraipp LANGUAGES CXX)
 
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_SCRIPTS "${PROJECT_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SCRIPTS})
+
 option(MIRAI_BUILD_DOCS "Build Mirai++ documentation" OFF)
 option(MIRAI_BUILD_EXAMPLES "Build code examples" OFF)
 

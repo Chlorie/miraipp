@@ -4,19 +4,22 @@
 #include <span>
 #include <clu/function_ref.h>
 #include <clu/optional_ref.h>
-#include <clu/coroutine/coroutine_scope.h>
 #include <clu/coroutine/task.h>
 #include <clu/coroutine/race.h>
 
 #include "common.h"
+#include "info_types.h"
 #include "config_types.h"
 #include "../detail/net_client.h"
 #include "../detail/json.h"
-#include "../event/event.h"
-#include "../pattern/pattern_awaiter.h"
+#include "../message/segment_types_fwd.h"
+#include "../event/event_types_fwd.h"
+#include "../pattern/pattern_matcher_queue.h"
 
 namespace mpp
 {
+    class Message;
+
     /// Mirai++ 中功能的核心类型，代表 mirai-api-http 中的一个会话。此类不可复制或移动。
     class Bot final
     {
@@ -204,7 +207,7 @@ namespace mpp
          * \brief 异步地启动 Websocket 会话，监听所有种类的事件
          * \param callback 接收到消息时需要调用的函数
          * \return （异步）无返回值
-         * \remark 回调函数的函数原型须为 clu::task<bool> callback(const Event&)，
+         * \remark 回调函数的函数原型须为\code clu::task<bool> callback(const AnyEvent&) \endcode ，
          * 当某次调用回调函数返回 true 时，在所有正在进行的回调函数全部执行完成后将会关闭 Websocket 会话。
          */
         clu::task<> async_monitor_events(clu::function_ref<clu::task<bool>(const Event&)> callback);
@@ -213,13 +216,13 @@ namespace mpp
 
         clu::task<> async_config(SessionConfig config);
 
-        template <EventComponent E, PatternFor<E>... Ps>
+        template <ConcreteEvent E, PatternFor<E>... Ps>
         clu::task<E> async_match(Ps&&... patterns)
         {
             co_return *co_await pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...);
         }
 
-        template <EventComponent E, PatternFor<E>... Ps>
+        template <ConcreteEvent E, PatternFor<E>... Ps>
         clu::task<std::optional<E>> async_match(const Clock::time_point deadline, Ps&&... patterns)
         {
             const auto res = co_await clu::race(
@@ -229,7 +232,7 @@ namespace mpp
             co_return std::nullopt;
         }
 
-        template <EventComponent E, PatternFor<E>... Ps>
+        template <ConcreteEvent E, PatternFor<E>... Ps>
         clu::task<std::optional<E>> async_match(const Clock::duration timeout, Ps&&... patterns)
         {
             return async_match<E>(Clock::now() + timeout, std::forward<Ps>(patterns)...);
@@ -250,5 +253,7 @@ namespace mpp
         auto async_wait(const Clock::duration dur) { return net_client_.async_wait(Clock::now() + dur); }
 
         void run() { net_client_.run(); } ///< 阻塞当前线程执行 I/O，直到所有 I/O 处理完成，可从多个线程调用
+
+        auto& io_context() { return net_client_.io_context(); } ///< 返回 bot 内使用的 asio::io_context
     };
 }

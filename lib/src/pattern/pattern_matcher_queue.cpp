@@ -1,4 +1,4 @@
-#include "mirai/pattern/pattern_awaiter.h"
+#include "mirai/pattern/pattern_matcher_queue.h"
 
 namespace mpp
 {

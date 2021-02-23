@@ -3,6 +3,7 @@
     "version-string": "1.0.0-dev1",
     "dependencies": [
         "boost-beast",
+        "boost-json",
         "clu",
         "fmt",
         "simdjson"

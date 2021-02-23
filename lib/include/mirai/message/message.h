@@ -19,8 +19,6 @@ namespace mpp
     private:
         std::vector<Segment> vec_;
 
-        bool sv_compare_impl(std::string_view other) const noexcept;
-
     public:
         template <typename... Ts> requires (std::convertible_to<Ts&&, Segment> && ...)
         explicit(false) Message(Ts&&... segments)
@@ -92,16 +90,22 @@ namespace mpp
         friend Message operator+(Message msg, T&& segment) { return msg += std::forward<T>(segment); }
 
         /// 连接两条消息
-        template <clu::similar_to<Message> T>
+        template <clu::forwarding<Message> T>
         friend Message operator+(Message lhs, T&& rhs) { return lhs += std::forward<T>(rhs); }
 
-        bool operator==(const Message& other) const noexcept;
-        bool operator==(const Segment& other) const noexcept;
+        bool operator==(const Message& other) const noexcept = default;
+        bool operator==(const Segment& other) const noexcept { return size() == 1 && front() == other; }
 
         template <std::convertible_to<std::string_view> T>
-        bool operator==(const T& other) const noexcept { return sv_compare_impl(other); }
+        bool operator==(const T& other) const noexcept
+        {
+            if (vec_.size() != 1) return false;
+            if (const auto* ptr = vec_.front().get_if<Plain>())
+                return ptr->text == other;
+            return false;
+        }
 
-        template <SegmentComponent T>
+        template <ConcreteSegment T>
         bool operator==(const T& other) const noexcept
         {
             if constexpr (std::is_same_v<T, Plain>)
@@ -115,8 +119,10 @@ namespace mpp
 
         friend void swap(Message& lhs, Message& rhs) noexcept { lhs.swap(rhs); } ///< 将两条消息互换
 
+        void collapse_adjacent_text(); ///< 将相邻的纯文本消息段合并成一个消息段
+
         /// 获取遍历该消息中所有特定类型消息段的范围
-        template <SegmentComponent T>
+        template <ConcreteSegment T>
         auto collect() const
         {
             return vec_

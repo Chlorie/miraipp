@@ -2,6 +2,8 @@
 
 #include <clu/hash.h>
 
+#include "mirai/event/event_types.h"
+
 namespace mpp
 {
     Event Event::from_json(const detail::JsonElem json)

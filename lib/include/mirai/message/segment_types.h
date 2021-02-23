@@ -177,5 +177,5 @@ namespace mpp
     };
 
     /// 消息段组成类型概念
-    template <typename T> concept SegmentComponent = requires { { T::type } -> std::convertible_to<SegmentType>; };
+    template <typename T> concept ConcreteSegment = requires { { T::type } -> std::convertible_to<SegmentType>; };
 }

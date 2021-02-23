@@ -1,9 +1,11 @@
 {
     "registries": [
         {
-            "kind": "filesystem",
-            "path": "../vcpkg-ports",
-            "packages": ["clu"]
+            "kind": "git",
+            "repository": "https://github.com/Chlorie/vcpkg-ports",
+            "packages": [
+                "clu"
+            ]
         }
     ]
 }

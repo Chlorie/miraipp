@@ -18,18 +18,22 @@ add_headers(HEADERS
     "core/exceptions.h"
     "core/format.h"
     "core/info_types.h"
+    "core/net_client.h"
     "detail/json.h"
     "detail/multipart_builder.h"
     "detail/net_client.h"
     "event/event.h"
+    "event/event_base.h"
     "event/event_bases.h"
     "event/event_types.h"
+    "event/event_types_fwd.h"
     "message/message.h"
     "message/segment.h"
     "message/segment_types.h"
+    "message/segment_types_fwd.h"
     "message/sent_message.h"
     "pattern/pattern.h"
-    "pattern/pattern_awaiter.h"
+    "pattern/pattern_matcher_queue.h"
     "pattern/pattern_types.h"
 )
 add_sources(SOURCES
@@ -37,6 +41,7 @@ add_sources(SOURCES
     "core/config_types.cpp"
     "core/exceptions.cpp"
     "core/info_types.cpp"
+    "core/net_client.cpp"
     "detail/multipart_builder.cpp"
     "detail/net_client.cpp"
     "event/event.cpp"
@@ -46,7 +51,7 @@ add_sources(SOURCES
     "message/segment.cpp"
     "message/segment_types.cpp"
     "message/sent_message.cpp"
-    "pattern/pattern_awaiter.cpp"
+    "pattern/pattern_matcher_queue.cpp"
 )
 
 find_package(clu CONFIG REQUIRED)
