@@ -10,7 +10,7 @@
 #include "common.h"
 #include "info_types.h"
 #include "config_types.h"
-#include "../detail/net_client.h"
+#include "net_client.h"
 #include "../detail/json.h"
 #include "../message/segment_types_fwd.h"
 #include "../event/event_types_fwd.h"
@@ -27,7 +27,7 @@ namespace mpp
         using Clock = std::chrono::steady_clock;
 
     private:
-        detail::NetClient net_client_;
+        net::Client net_client_;
         UserId bot_id_;
         std::string sess_key_;
         PatternMatcherQueue pm_queue_;

@@ -13,16 +13,7 @@ namespace mpp
     namespace
     {
         thread_local simdjson::dom::parser parser;
-
-        auto get_response_json(const detail::response& response)
-        {
-            using enum boost::beast::http::status_class;
-            const auto status_class = to_status_class(response.result());
-            if (status_class == client_error || status_class == server_error || status_class == unknown)
-                throw HttpStatusException(response.result(), std::string(response.reason()));
-            return parser.parse(response.body());
-        }
-
+        
         void check_json(const detail::JsonRes json)
         {
             const auto code = json["code"];
@@ -33,16 +24,11 @@ namespace mpp
             }
         }
 
-        auto get_checked_response_json(const detail::response& response)
+        auto get_checked_response_json(const std::string& response)
         {
-            const auto json = get_response_json(response);
+            const auto json = parser.parse(response);
             check_json(json);
             return json;
-        }
-
-        auto to_beast_sv(const std::string_view sv)
-        {
-            return boost::beast::string_view{ sv.data(), sv.size() };
         }
     }
 
@@ -102,7 +88,7 @@ namespace mpp
 
     clu::task<std::string> Bot::async_get_version()
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get("/about"));
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get("/about"));
         co_return std::string(json.at_pointer("/data/version"));
     }
 
@@ -112,25 +98,25 @@ namespace mpp
 
         auto auth_body = fmt::format(R"({{"authKey":{}}})", detail::JsonQuoted{ auth_key });
         const auto auth_json = get_checked_response_json(
-            co_await net_client_.async_post_json("/auth", std::move(auth_body)));
+            co_await net_client_.async_http_post_json("/auth", std::move(auth_body)));
         sess_key_ = std::string(auth_json["session"]);
 
         auto verify_body = fmt::format(R"({{"sessionKey":{},"qq":{}}})", detail::JsonQuoted{ sess_key_ }, id.id);
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/verify", std::move(verify_body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/verify", std::move(verify_body)));
 
         bot_id_ = id;
     }
 
     void Bot::release()
     {
-        (void)get_checked_response_json(net_client_.post_json("/release", release_body()));
+        (void)get_checked_response_json(net_client_.http_post_json("/release", release_body()));
         bot_id_ = {};
         sess_key_.clear();
     }
 
     clu::task<> Bot::async_release()
     {
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/release", release_body()));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/release", release_body()));
         bot_id_ = {};
         sess_key_.clear();
     }
@@ -139,7 +125,7 @@ namespace mpp
         const UserId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendFriendMessage", send_message_body(id.id, message, quote)));
+            co_await net_client_.async_http_post_json("/sendFriendMessage", send_message_body(id.id, message, quote)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -147,7 +133,7 @@ namespace mpp
         const GroupId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendGroupMessage", send_message_body(id.id, message, quote)));
+            co_await net_client_.async_http_post_json("/sendGroupMessage", send_message_body(id.id, message, quote)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -164,7 +150,7 @@ namespace mpp
             if (quote) scope.add_entry("quote", quote->id);
         });
         const auto res = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendTempMessage", std::move(body)));
+            co_await net_client_.async_http_post_json("/sendTempMessage", std::move(body)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -176,7 +162,7 @@ namespace mpp
             scope.add_entry("sessionKey", sess_key_);
             scope.add_entry("target", id.id);
         });
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/recall", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/recall", std::move(body)));
     }
 
     clu::task<std::vector<std::string>> Bot::async_send_image_message(
@@ -190,7 +176,7 @@ namespace mpp
             scope.add_entry("urls", urls);
         });
         const auto json = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendImageMessage", std::move(body)));
+            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
         co_return detail::from_json<std::vector<std::string>>(json);
     }
 
@@ -205,7 +191,7 @@ namespace mpp
             scope.add_entry("urls", urls);
         });
         const auto json = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendImageMessage", std::move(body)));
+            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
         co_return detail::from_json<std::vector<std::string>>(json);
     }
 
@@ -221,109 +207,97 @@ namespace mpp
             scope.add_entry("urls", urls);
         });
         const auto json = get_checked_response_json(
-            co_await net_client_.async_post_json("/sendImageMessage", std::move(body)));
+            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
         co_return detail::from_json<std::vector<std::string>>(json);
     }
 
     clu::task<Image> Bot::async_upload_image(const TargetType type, const std::filesystem::path& path)
     {
-        using namespace detail;
-
-        request req{ http::verb::post, "/uploadImage", 11 };
-        req.set(http::field::host, net_client_.host());
-        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        req.set(http::field::content_type, to_beast_sv(MultipartBuilder::content_type));
+        using detail::MultipartBuilder;
 
         MultipartBuilder builder;
         builder.add_key_value("sessionKey", sess_key_);
         builder.add_key_value("type", to_string_view(type));
         builder.add_file("img", path);
-        req.body() = builder.take_string();
-        req.content_length(req.body().size());
 
-        auto res = get_checked_response_json(co_await net_client_.async_request(std::move(req)));
+        auto res = get_checked_response_json(co_await net_client_.async_http_post(
+            "/uploadImage", MultipartBuilder::content_type, builder.take_string()));
         co_return Image::from_json(res.value());
     }
 
     clu::task<Voice> Bot::async_upload_voice(const TargetType type, const std::filesystem::path& path)
     {
-        using namespace detail;
-
-        request req{ http::verb::post, "/uploadVoice", 11 };
-        req.set(http::field::host, net_client_.host());
-        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
-        req.set(http::field::content_type, to_beast_sv(MultipartBuilder::content_type));
+        using detail::MultipartBuilder;
 
         MultipartBuilder builder;
         builder.add_key_value("sessionKey", sess_key_);
         builder.add_key_value("type", to_string_view(type));
         builder.add_file("voice", path);
-        req.body() = builder.take_string();
-        req.content_length(req.body().size());
-
-        auto res = get_checked_response_json(co_await net_client_.async_request(std::move(req)));
+        
+        auto res = get_checked_response_json(co_await net_client_.async_http_post(
+            "/uploadVoice", MultipartBuilder::content_type, builder.take_string()));
         co_return Voice::from_json(res.value());
     }
 
     clu::task<std::vector<Event>> Bot::async_pop_events(const size_t count)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/fetchMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
     }
 
     clu::task<std::vector<Event>> Bot::async_pop_latest_events(const size_t count)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/fetchLatestMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
     }
 
     clu::task<std::vector<Event>> Bot::async_peek_events(const size_t count)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
     }
 
     clu::task<std::vector<Event>> Bot::async_peek_latest_events(const size_t count)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/peekLatestMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
     }
 
     clu::task<Event> Bot::async_retrieve_message(const MessageId id)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/messageFromId?sessionKey={}&id={}", sess_key_, id.id)));
         co_return Event::from_json(json["data"]);
     }
 
     clu::task<size_t> Bot::async_count_message()
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/countMessage?sessionKey={}", sess_key_)));
         co_return detail::from_json<size_t>(json["data"]);
     }
 
     clu::task<std::vector<Friend>> Bot::async_list_friends()
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/friendList?sessionKey={}", sess_key_)));
         co_return detail::from_json<std::vector<Friend>>(json["data"]);
     }
 
     clu::task<std::vector<Group>> Bot::async_list_groups()
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/groupList?sessionKey={}", sess_key_)));
         co_return detail::from_json<std::vector<Group>>(json["data"]);
     }
 
     clu::task<std::vector<Member>> Bot::async_list_members(const GroupId id)
     {
-        const auto json = get_checked_response_json(co_await net_client_.async_get(
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/memberList?sessionKey={}&target={}", sess_key_, id.id)));
         co_return detail::from_json<std::vector<Member>>(json["data"]);
     }
@@ -338,7 +312,7 @@ namespace mpp
             scope.add_entry("memberId", user.id);
             scope.add_entry("time", duration.count());
         });
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/mute", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/mute", std::move(body)));
     }
 
     clu::task<> Bot::async_unmute(const GroupId group, const UserId user)
@@ -350,18 +324,18 @@ namespace mpp
             scope.add_entry("target", group.id);
             scope.add_entry("memberId", user.id);
         });
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/unmute", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/unmute", std::move(body)));
     }
 
     clu::task<> Bot::async_mute_all(const GroupId group)
     {
-        (void)get_checked_response_json(co_await net_client_.async_post_json(
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json(
             "/muteAll", group_target_body(group)));
     }
 
     clu::task<> Bot::async_unmute_all(const GroupId group)
     {
-        (void)get_checked_response_json(co_await net_client_.async_post_json(
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json(
             "/unmuteAll", group_target_body(group)));
     }
 
@@ -375,12 +349,12 @@ namespace mpp
             scope.add_entry("memberId", user.id);
             scope.add_entry("msg", reason);
         });
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/kick", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/kick", std::move(body)));
     }
 
     clu::task<> Bot::async_quit(const GroupId group)
     {
-        (void)get_checked_response_json(co_await net_client_.async_post_json(
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json(
             "/quit", group_target_body(group)));
     }
 
@@ -398,7 +372,7 @@ namespace mpp
             scope.add_entry("message", reason);
         });
         (void)get_checked_response_json(
-            co_await net_client_.async_post_json("/resp/newFriendRequestEvent", std::move(body)));
+            co_await net_client_.async_http_post_json("/resp/newFriendRequestEvent", std::move(body)));
     }
 
     clu::task<> Bot::async_respond(
@@ -415,7 +389,7 @@ namespace mpp
             scope.add_entry("message", reason);
         });
         (void)get_checked_response_json(
-            co_await net_client_.async_post_json("/resp/memberJoinRequestEvent", std::move(body)));
+            co_await net_client_.async_http_post_json("/resp/memberJoinRequestEvent", std::move(body)));
     }
 
     clu::task<> Bot::async_respond(
@@ -432,13 +406,13 @@ namespace mpp
             scope.add_entry("message", reason);
         });
         (void)get_checked_response_json(
-            co_await net_client_.async_post_json("/resp/botInvitedJoinGroupRequestEvent", std::move(body)));
+            co_await net_client_.async_http_post_json("/resp/botInvitedJoinGroupRequestEvent", std::move(body)));
     }
 
     clu::task<> Bot::async_monitor_events(const clu::function_ref<clu::task<bool>(const Event&)> callback)
     {
-        detail::WebsocketSession ws = net_client_.get_ws_session();
-        co_await net_client_.async_connect_ws(ws, fmt::format("/all?sessionKey={}", sess_key_));
+        net::WebsocketSession ws = net_client_.new_websocket_session();
+        co_await net_client_.async_connect_websocket(ws, fmt::format("/all?sessionKey={}", sess_key_));
 
         std::atomic_bool close{ false };
         clu::coroutine_scope scope;
@@ -477,7 +451,7 @@ namespace mpp
             if (cache_size) scope.add_entry("cacheSize", *cache_size);
             if (enable_websocket) scope.add_entry("enableWebsocket", *enable_websocket);
         });
-        (void)get_checked_response_json(co_await net_client_.async_post_json("/config", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/config", std::move(body)));
     }
 
     clu::task<> Bot::async_config(const SessionConfig config) { return async_config(config.cache_size, config.enable_websocket); }

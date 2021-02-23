@@ -1,4 +1,5 @@
 #include <set>
+#include <array>
 #include <random>
 #include <clu/coroutine/coroutine_scope.h>
 #include <clu/coroutine/when_all.h>
