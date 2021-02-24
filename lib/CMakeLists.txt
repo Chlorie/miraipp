@@ -1,5 +1,7 @@
 add_library(miraipp)
 
+set(LIB_NAME miraipp)
+
 function (add_headers VAR)
     set(headers ${ARGN})
     list(TRANSFORM headers PREPEND "include/mirai/")
@@ -58,10 +60,12 @@ find_package(fmt CONFIG REQUIRED)
 find_package(Threads)
 find_package(simdjson CONFIG REQUIRED)
 
-target_sources(miraipp PUBLIC ${HEADERS} PRIVATE ${SOURCES})
+target_sources(miraipp PRIVATE ${HEADERS} ${SOURCES})
 target_set_options(miraipp)
-target_include_directories(miraipp PUBLIC
-    ${Boost_INCLUDE_DIRS}
+target_include_directories(miraipp
+PRIVATE
+    ${Boost_INCLUDE_DIRS} # Boost only used in implementation
+PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
@@ -71,3 +75,33 @@ target_link_libraries(miraipp PUBLIC
     fmt::fmt
     simdjson::simdjson
 )
+
+if (MIRAI_INSTALL)
+    include(CMakePackageConfigHelpers)
+    write_basic_package_version_file(
+        "${PROJECT_BINARY_DIR}/${LIB_NAME}ConfigVersion.cmake"
+        VERSION ${PACKAGE_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
+
+    install(TARGETS ${LIB_NAME}
+        EXPORT ${LIB_NAME}Targets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        PUBLIC_HEADER DESTINATION include
+    )
+
+    include(CMakePackageConfigHelpers)
+    configure_package_config_file(
+        "${PROJECT_SOURCE_DIR}/cmake/${LIB_NAME}Config.cmake.in"
+        "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake"
+        INSTALL_DESTINATION lib/cmake/${LIB_NAME}
+    )
+
+    install(EXPORT ${LIB_NAME}Targets DESTINATION lib/cmake/${LIB_NAME})
+    install(FILES "${PROJECT_BINARY_DIR}/${LIB_NAME}ConfigVersion.cmake"
+                  "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake"
+            DESTINATION lib/cmake/${LIB_NAME})
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/lib/include/ DESTINATION include)
+endif ()

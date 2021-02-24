@@ -24,5 +24,15 @@ namespace mpp
         std::optional<bool> allow_anonymous_chat;
 
         static GroupConfig from_json(detail::JsonElem json);
+        void format_as_json(fmt::format_context& ctx) const;
+    };
+
+    struct MemberInfo final
+    {
+        std::optional<std::string> name;
+        std::optional<std::string> special_title;
+
+        static MemberInfo from_json(detail::JsonElem json);
+        void format_as_json(fmt::format_context& ctx) const;
     };
 }

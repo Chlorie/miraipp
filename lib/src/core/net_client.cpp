@@ -181,7 +181,7 @@ namespace mpp::net
             return std::move(res).body();
         }
 
-        clu::task<std::string> async_http_request(const request& req)
+        clu::task<std::string> async_http_request(request req)
         {
             const auto impl = [&]() -> asio::awaitable<std::string>
             {
@@ -215,8 +215,8 @@ namespace mpp::net
             req.set(http::field::host, host_);
             req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
             req.set(http::field::content_type, to_beast_sv(content_type));
-            req.content_length(body.size());
             req.body() = std::move(body);
+            req.prepare_payload();
             return req;
         }
 

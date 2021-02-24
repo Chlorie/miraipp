@@ -13,11 +13,12 @@ namespace mpp
     namespace
     {
         thread_local simdjson::dom::parser parser;
-        
+
         void check_json(const detail::JsonRes json)
         {
             const auto code = json["code"];
-            if (code.error() != simdjson::NO_SUCH_FIELD)
+            using enum simdjson::error_code;
+            if (code.error() != NO_SUCH_FIELD && code.error() != INCORRECT_TYPE)
             {
                 const int64_t int_code = code;
                 check_status_code(static_cast<MiraiStatus>(int_code));
@@ -233,7 +234,7 @@ namespace mpp
         builder.add_key_value("sessionKey", sess_key_);
         builder.add_key_value("type", to_string_view(type));
         builder.add_file("voice", path);
-        
+
         auto res = get_checked_response_json(co_await net_client_.async_http_post(
             "/uploadVoice", MultipartBuilder::content_type, builder.take_string()));
         co_return Voice::from_json(res.value());
@@ -285,21 +286,21 @@ namespace mpp
     {
         const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/friendList?sessionKey={}", sess_key_)));
-        co_return detail::from_json<std::vector<Friend>>(json["data"]);
+        co_return detail::from_json<std::vector<Friend>>(json);
     }
 
     clu::task<std::vector<Group>> Bot::async_list_groups()
     {
         const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/groupList?sessionKey={}", sess_key_)));
-        co_return detail::from_json<std::vector<Group>>(json["data"]);
+        co_return detail::from_json<std::vector<Group>>(json);
     }
 
     clu::task<std::vector<Member>> Bot::async_list_members(const GroupId id)
     {
         const auto json = get_checked_response_json(co_await net_client_.async_http_get(
             fmt::format("/memberList?sessionKey={}&target={}", sess_key_, id.id)));
-        co_return detail::from_json<std::vector<Member>>(json["data"]);
+        co_return detail::from_json<std::vector<Member>>(json);
     }
 
     clu::task<> Bot::async_mute(const GroupId group, const UserId user, std::chrono::seconds duration)
@@ -409,6 +410,45 @@ namespace mpp
             co_await net_client_.async_http_post_json("/resp/botInvitedJoinGroupRequestEvent", std::move(body)));
     }
 
+    clu::task<GroupConfig> Bot::async_get_group_config(const GroupId group)
+    {
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
+            fmt::format("/groupConfig?sessionKey={}&target={}", sess_key_, group.id)));
+        co_return detail::from_json<GroupConfig>(json);
+    }
+
+    clu::task<> Bot::async_config_group(const GroupId group, const GroupConfig& config)
+    {
+        auto body = detail::perform_format([&](fmt::format_context& ctx)
+        {
+            detail::JsonObjScope scope(ctx);
+            scope.add_entry("sessionKey", sess_key_);
+            scope.add_entry("target", group.id);
+            scope.add_entry("config", config);
+        });
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/groupConfig", std::move(body)));
+    }
+
+    clu::task<MemberInfo> Bot::async_get_member_info(const GroupId group, const UserId user)
+    {
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
+            fmt::format("/groupConfig?sessionKey={}&target={}&memberId={}", sess_key_, group.id, user.id)));
+        co_return detail::from_json<MemberInfo>(json);
+    }
+
+    clu::task<> Bot::async_set_member_info(const GroupId group, const UserId user, const MemberInfo& info)
+    {
+        auto body = detail::perform_format([&](fmt::format_context& ctx)
+        {
+            detail::JsonObjScope scope(ctx);
+            scope.add_entry("sessionKey", sess_key_);
+            scope.add_entry("target", group.id);
+            scope.add_entry("memberId", user.id);
+            scope.add_entry("info", info);
+        });
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/memberInfo", std::move(body)));
+    }
+
     clu::task<> Bot::async_monitor_events(const clu::function_ref<clu::task<bool>(const Event&)> callback)
     {
         net::WebsocketSession ws = net_client_.new_websocket_session();
@@ -440,6 +480,13 @@ namespace mpp
 
         co_await scope.join();
         co_await ws.async_close();
+    }
+
+    clu::task<SessionConfig> Bot::async_get_config()
+    {
+        const auto json = get_checked_response_json(co_await net_client_.async_http_get(
+            fmt::format("/config?sessionKey={}", sess_key_)));
+        co_return detail::from_json<SessionConfig>(json);
     }
 
     clu::task<> Bot::async_config(const clu::optional_param<int32_t> cache_size, const clu::optional_param<bool> enable_websocket)

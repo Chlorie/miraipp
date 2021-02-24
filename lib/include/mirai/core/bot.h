@@ -197,11 +197,11 @@ namespace mpp
         clu::task<> async_respond(
             const BotInvitedJoinGroupRequestEvent& ev, BotInvitedJoinGroupResponseType type, std::string_view reason);
 
-        // clu::task<GroupConfig> async_get_group_config(GroupId group);
-        // clu::task<> async_config_group(GroupId group, const GroupConfig& config);
+        clu::task<GroupConfig> async_get_group_config(GroupId group);
+        clu::task<> async_config_group(GroupId group, const GroupConfig& config);
 
-        // clu::task<MemberInfo> async_get_member_info(GroupId group, UserId user);
-        // clu::task<> async_set_member_info(GroupId group, UserId user, const MemberInfo& info);
+        clu::task<MemberInfo> async_get_member_info(GroupId group, UserId user);
+        clu::task<> async_set_member_info(GroupId group, UserId user, const MemberInfo& info);
 
         /**
          * \brief 异步地启动 Websocket 会话，监听所有种类的事件
@@ -211,6 +211,8 @@ namespace mpp
          * 当某次调用回调函数返回 true 时，在所有正在进行的回调函数全部执行完成后将会关闭 Websocket 会话。
          */
         clu::task<> async_monitor_events(clu::function_ref<clu::task<bool>(const Event&)> callback);
+
+        clu::task<SessionConfig> async_get_config();
 
         clu::task<> async_config(clu::optional_param<int32_t> cache_size = {}, clu::optional_param<bool> enable_websocket = {});
 
