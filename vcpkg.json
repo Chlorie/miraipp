@@ -1,9 +1,8 @@
 {
     "name": "miraipp",
-    "version-string": "1.0.0-dev1",
+    "version-string": "0.1.0",
     "dependencies": [
         "boost-beast",
-        "boost-json",
         "clu",
         "fmt",
         "simdjson"

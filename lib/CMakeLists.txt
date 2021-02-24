@@ -69,9 +69,11 @@ PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(miraipp PUBLIC
-    clu
+target_link_libraries(miraipp
+PRIVATE
     ${Boost_LIBRARIES}
+PUBLIC
+    clu
     fmt::fmt
     simdjson::simdjson
 )
