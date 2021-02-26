@@ -41,6 +41,8 @@ namespace mpp
         std::vector<Event> parse_events(detail::JsonElem json);
         
     public:
+        /// \addtogroup bot_specials
+        /// \{
         /**
          * \brief 创建新的 bot 对象并同步地连接到指定端点
          * \param host 要连接到端点的主机，默认为 127.0.0.1
@@ -48,17 +50,20 @@ namespace mpp
          */
         explicit Bot(const std::string_view host = "127.0.0.1", const std::string_view port = "8080"):
             net_client_(host, port) {}
-
         ~Bot() noexcept; ///< 销毁当前 bot 对象，释放未结束的会话并关闭所有连接
+        /// \}
 
         Bot(const Bot&) = delete;
         Bot(Bot&&) = delete;
         Bot& operator=(const Bot&) = delete;
         Bot& operator=(Bot&&) = delete;
 
+        /// \addtogroup bot_properties
+        /// \{
         UserId id() const noexcept { return bot_id_; } ///< 获取当前 bot 的 QQ 号
         bool authorized() const noexcept { return bot_id_.valid(); } ///< 当前 bot 是否已授权
         std::string_view session_key() const noexcept { return sess_key_; } ///< 获取当前已授权 bot 的会话密钥
+        /// \}
 
         /// \addtogroup bot_get_version
         /// \{
@@ -70,7 +75,7 @@ namespace mpp
         clu::task<std::string> async_get_version();
         /// \}
 
-        /// \addtogroup bot_authorize
+        /// \addtogroup bot_session
         /// \{
         void authorize(std::string_view auth_key, UserId id);
         /**
@@ -79,10 +84,9 @@ namespace mpp
          * \param id 对应的已登录 bot 的 QQ 号
          */
         clu::task<void> async_authorize(std::string_view auth_key, UserId id);
-        /// \}
-
         void release(); ///< 同步地释放当前会话，若当前对象析构时会话仍在开启状态则会调用此函数
         clu::task<void> async_release(); ///< 异步地释放当前会话
+        /// \}
 
         /// \addtogroup bot_send_message
         /// \{

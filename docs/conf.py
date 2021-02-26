@@ -68,3 +68,20 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['custom']
 html_css_files = ['custom.css']
+
+
+# -- Read the Docs support ---------------------------------------------------
+
+import os, subprocess
+
+def config_doxyfile():
+    with open('Doxyfile.in', 'r') as f:
+        s = f.read()
+    s = s.replace('@PROJECT_SOURCE_DIR@', '..')
+    with open('Doxyfile', 'w') as f:
+        f.write(s)
+
+if os.environ.get('READTHEDOCS', None) == 'True':  # On RtD
+    config_doxyfile()
+    subprocess.call('doxygen', shell=True)
+    breathe_projects = {'miraipp': './xml'}

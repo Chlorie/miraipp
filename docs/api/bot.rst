@@ -8,17 +8,20 @@ Bot
 
 特殊成员函数
 ............
-.. doxygenfunction:: mpp::Bot::Bot(const std::string_view, const std::string_view)
-.. doxygenfunction:: mpp::Bot::~Bot
+.. doxygengroup:: bot_specials
+   :content-only:
+
+基本属性获取
+............
+.. doxygengroup:: bot_properties
+   :content-only:
 
 mirai-api-http 会话管理
 ...........................
 .. doxygengroup:: bot_get_version
    :content-only:
-.. doxygengroup:: bot_authorize
+.. doxygengroup:: bot_session
    :content-only:
-.. doxygenfunction:: mpp::Bot::release
-.. doxygenfunction:: mpp::Bot::async_release
 
 消息发送
 ........
