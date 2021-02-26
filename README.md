@@ -2,4 +2,4 @@
 
 目前仍在起步阶段（
 
-更多信息看 Wiki（
+乱七八糟内容请看 Wiki，说明文档请见 [Docs](https://miraipp.readthedocs.io/en/latest/index.html)（

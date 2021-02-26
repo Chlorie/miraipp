@@ -41,7 +41,7 @@ namespace mpp
         std::vector<Event> parse_events(detail::JsonElem json);
 
     public:
-        /// \defgroup bot_specials
+        /// \defgroup BotSpecial
         /// \{
         /**
          * \brief 创建新的 bot 对象并同步地连接到指定端点
@@ -58,14 +58,14 @@ namespace mpp
         Bot& operator=(const Bot&) = delete;
         Bot& operator=(Bot&&) = delete;
 
-        /// \defgroup bot_properties
+        /// \defgroup BotProps
         /// \{
         UserId id() const noexcept { return bot_id_; } ///< 获取当前 bot 的 QQ 号
         bool authorized() const noexcept { return bot_id_.valid(); } ///< 当前 bot 是否已授权
         std::string_view session_key() const noexcept { return sess_key_; } ///< 获取当前已授权 bot 的会话密钥
         /// \}
 
-        /// \defgroup bot_get_version
+        /// \defgroup BotGetVer
         /// \{
         std::string get_version();
         /**
@@ -75,7 +75,7 @@ namespace mpp
         clu::task<std::string> async_get_version();
         /// \}
 
-        /// \defgroup bot_session
+        /// \defgroup BotSess
         /// \{
         void authorize(std::string_view auth_key, UserId id);
         /**
@@ -88,7 +88,7 @@ namespace mpp
         clu::task<void> async_release(); ///< 异步地释放当前会话
         /// \}
 
-        /// \defgroup bot_send_message
+        /// \defgroup BotSendMsg
         /// \{
         MessageId send_message(UserId id, const Message& message, clu::optional_param<MessageId> quote = {});
         MessageId send_message(GroupId id, const Message& message, clu::optional_param<MessageId> quote = {});

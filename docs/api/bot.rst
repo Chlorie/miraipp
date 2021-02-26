@@ -8,22 +8,22 @@ Bot
 
 特殊成员函数
 ............
-.. doxygengroup:: bot_specials
+.. doxygengroup:: BotSpecial
    :content-only:
 
 基本属性获取
 ............
-.. doxygengroup:: bot_properties
+.. doxygengroup:: BotProps
    :content-only:
 
 mirai-api-http 会话管理
 ...........................
-.. doxygengroup:: bot_get_version
+.. doxygengroup:: BotGetVer
    :content-only:
-.. doxygengroup:: bot_session
+.. doxygengroup:: BotSess
    :content-only:
 
 消息发送
 ........
-.. doxygengroup:: bot_send_message
+.. doxygengroup:: BotSendMsg
    :content-only:
