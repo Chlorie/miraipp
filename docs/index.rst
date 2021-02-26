@@ -1,10 +1,13 @@
 欢迎使用 Mirai++
 ====================================
 
-估计短时间之内 API reference 都会处于半崩坏的状态。Mirai++ 用了太多 C++20 的新特性，doxygen 的 parser 一时间还不能理解这些新语法。
+.. warning::
+   文档我基本上都还没写！！！！！11111111
 
 .. toctree::
-   :maxdepth: 2
-   :caption: 总览:
+   :maxdepth: 1
+   :caption: 目录:
    
-   docs
+   install
+   tutorials
+   api

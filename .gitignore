@@ -3,5 +3,6 @@
 out/
 build/
 CMakeSettings.json
+Folder.DotSettings.user
 docs/output/
 vcpkg_installed/

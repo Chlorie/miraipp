@@ -1,5 +1,3 @@
-message("PATH: $ENV{PATH}")
-
 find_program(SPHINX_EXECUTABLE
     NAMES sphinx-build
     DOC "Path to sphinx-build executable")

@@ -38,7 +38,7 @@ cpp_index_common_prefix = ['mpp::']
 extensions = ['breathe']
 
 breathe_default_project = 'miraipp'
-breathe_default_members = ('members',)
+breathe_default_members = ()
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
