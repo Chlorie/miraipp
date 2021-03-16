@@ -1,6 +1,7 @@
 {
     "name": "miraipp",
     "version-string": "0.1.2",
+    "port-version": 1, 
     "dependencies": [
         "boost-beast",
         "clu",
