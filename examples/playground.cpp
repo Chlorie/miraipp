@@ -110,9 +110,8 @@ clu::task<> mafs_test(mpp::Bot& bot, const mpp::GroupId gid, const mpp::UserId u
     for (const auto& [question, answer] : generate_qa())
     {
         co_await bot.async_send_message(gid, question);
-        const auto ev = co_await bot.async_match<mpp::GroupMessageEvent>(5s,
-            from(gid), from(uid), mpp::with_content(answer));
-        if (!ev)
+        if (!co_await bot.async_match<mpp::GroupMessageEvent>(5s,
+            from(gid), from(uid), mpp::with_content(answer)))
         {
             co_await bot.async_send_message(gid, "不太行啊~");
             co_return;

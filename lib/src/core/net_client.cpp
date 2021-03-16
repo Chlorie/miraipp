@@ -156,6 +156,15 @@ namespace mpp::net
             void cancel() { timer_.cancel(); }
         };
 
+        static auto get_ws_stream_decorator()
+        {
+            return ws::stream_base::decorator([](ws::request_type& req)
+            {
+                req.set(http::field::user_agent,
+                    BOOST_BEAST_VERSION_STRING);
+            });
+        }
+
     public:
         Impl(const std::string_view host, const std::string_view port): host_(host)
         {
@@ -222,16 +231,19 @@ namespace mpp::net
 
         auto async_wait(const TimePoint tp) { return WaitUntilAwaiter(ctx_, tp); }
 
+        void connect_websocket(ws_stream& stream, const std::string_view target)
+        {
+            const auto ep = get_lowest_layer(stream).connect(eps_);
+            stream.set_option(get_ws_stream_decorator());
+            stream.handshake(fmt::format("{}:{}", host_, ep.port()), std::string(target));
+        }
+
         clu::task<> async_connect_websocket(ws_stream& stream, const std::string_view target)
         {
             const auto impl = [&]() -> asio::awaitable<void>
             {
                 const auto ep = co_await get_lowest_layer(stream).async_connect(eps_, asio::use_awaitable);
-                stream.set_option(ws::stream_base::decorator([](ws::request_type& req)
-                {
-                    req.set(http::field::user_agent,
-                        BOOST_BEAST_VERSION_STRING);
-                }));
+                stream.set_option(get_ws_stream_decorator());
                 co_await stream.async_handshake(
                     fmt::format("{}:{}", host_, ep.port()), std::string(target), asio::use_awaitable);
             };
@@ -250,6 +262,15 @@ namespace mpp::net
     public:
         explicit Impl(asio::io_context& ctx): ctx_(ctx), stream_(make_strand(ctx)) {}
 
+        std::string read()
+        {
+            stream_.read(buffer_);
+            const size_t size = buffer_.size();
+            std::string result(static_cast<const char*>(buffer_.data().data()), size);
+            buffer_.consume(size);
+            return std::move(result);
+        }
+
         clu::task<std::string> async_read()
         {
             const auto impl = [&]() -> asio::awaitable<std::string>
@@ -262,6 +283,8 @@ namespace mpp::net
             };
             co_return co_await AsioAwaiter(ctx_, impl());
         }
+
+        void close() { stream_.close(ws::normal); }
 
         clu::task<> async_close()
         {
@@ -325,6 +348,12 @@ namespace mpp::net
 
     WebsocketSession Client::new_websocket_session() { return WebsocketSession(io_context()); }
 
+    void Client::connect_websocket(WebsocketSession& ws, const std::string_view target)
+    {
+        return impl_->connect_websocket(
+            ws.pimpl_ptr()->stream_, target);
+    }
+
     clu::task<> Client::async_connect_websocket(WebsocketSession& ws, const std::string_view target)
     {
         return impl_->async_connect_websocket(
@@ -336,7 +365,9 @@ namespace mpp::net
     WebsocketSession::WebsocketSession(WebsocketSession&&) noexcept = default;
     WebsocketSession& WebsocketSession::operator=(WebsocketSession&&) noexcept = default;
 
+    std::string WebsocketSession::read() { return impl_->read(); }
     clu::task<std::string> WebsocketSession::async_read() { return impl_->async_read(); }
+    void WebsocketSession::close() { return impl_->close(); }
     clu::task<> WebsocketSession::async_close() { return impl_->async_close(); }
     // ReSharper restore CppMemberFunctionMayBeConst
 }

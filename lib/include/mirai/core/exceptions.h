@@ -9,7 +9,7 @@ namespace boost::beast::http
 
 namespace mpp
 {
-    /// Mirai API HTTP 状态码
+    /// mirai-api-http 状态码
     enum class MiraiStatus
     {
         success = 0,

@@ -2,6 +2,47 @@
 
 namespace mpp
 {
+    bool Message::starts_with_sv(const std::string_view sv) const
+    {
+        if (sv.empty()) return true;
+        if (empty()) return false;
+        if (const auto* ptr = front().get_if<Plain>())
+        {
+            const std::string_view prefix =
+                std::string_view(ptr->text).substr(0, sv.length());
+            return prefix == sv;
+        }
+        return false;
+    }
+
+    bool Message::ends_with_sv(const std::string_view sv) const
+    {
+        if (sv.empty()) return true;
+        if (empty()) return false;
+        if (const auto* ptr = front().get_if<Plain>())
+        {
+            const std::string_view full = ptr->text;
+            const std::string_view suffix =
+                full.substr(full.length() - sv.length(), sv.length());
+            return suffix == sv;
+        }
+        return false;
+    }
+
+    bool Message::contains_sv(const std::string_view sv) const
+    {
+        if (sv.empty()) return true;
+        return std::ranges::any_of(vec_, [sv](const Segment& seg)
+        {
+            if (const auto* ptr = seg.get_if<Plain>())
+            {
+                const std::string_view plain = ptr->text;
+                return plain.find(sv) != std::string_view::npos;
+            }
+            return false;
+        });
+    }
+
     void Message::collapse_adjacent_text()
     {
         std::vector<Segment> result;
@@ -17,6 +58,19 @@ namespace mpp
             result.push_back(std::move(segment));
         }
         vec_ = std::move(result);
+    }
+
+    bool Message::starts_with(const Segment& prefix) const
+    {
+        if (const auto* ptr = prefix.get_if<Plain>())
+            return starts_with_sv(ptr->text);
+        else
+            return !vec_.empty() && vec_.front() == prefix;
+    }
+
+    bool Message::starts_with(const Message& prefix) const
+    {
+        
     }
 
     std::string Message::collect_text() const

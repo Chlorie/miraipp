@@ -46,6 +46,7 @@ namespace mpp::net
         clu::cancellable_task<bool> async_wait(TimePoint tp);
 
         WebsocketSession new_websocket_session();
+        void connect_websocket(WebsocketSession& ws, std::string_view target);
         clu::task<> async_connect_websocket(WebsocketSession& ws, std::string_view target);
 
         Impl* pimpl_ptr() const { return impl_.get(); }
@@ -65,7 +66,9 @@ namespace mpp::net
         WebsocketSession& operator=(const WebsocketSession&) = delete;
         WebsocketSession& operator=(WebsocketSession&&) noexcept;
 
+        std::string read();
         clu::task<std::string> async_read();
+        void close();
         clu::task<> async_close();
 
         Impl* pimpl_ptr() const { return impl_.get(); }

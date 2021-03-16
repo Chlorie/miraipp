@@ -4,7 +4,6 @@
 #include <span>
 #include <clu/function_ref.h>
 #include <clu/optional_ref.h>
-#include <clu/coroutine/task.h>
 #include <clu/coroutine/race.h>
 
 #include "common.h"
@@ -33,10 +32,6 @@ namespace mpp
         PatternMatcherQueue pm_queue_;
 
         std::string check_auth_gen_body(std::string_view auth_key) const;
-        std::string release_body() const;
-        std::string send_message_body(int64_t id, const Message& message, clu::optional_param<MessageId> quote) const;
-        std::string send_message_body(TempId id, const Message& message, clu::optional_param<MessageId> quote) const;
-        std::string group_target_body(GroupId group) const;
         Event parse_event(detail::JsonElem json);
         std::vector<Event> parse_events(detail::JsonElem json);
 
@@ -103,84 +98,69 @@ namespace mpp
          * \return 已发送消息的 id，用于撤回和引用回复
          */
         clu::task<MessageId> async_send_message(TempId id, const Message& message, clu::optional_param<MessageId> quote = {});
-        /// \}
 
+        void recall(MessageId id);
         /**
-         * \brief 异步地撤回一条消息
+         * \brief 撤回一条消息
          * \param id 要撤回的消息 id
          */
         clu::task<void> async_recall(MessageId id);
 
-        /**
-         * \brief 异步地向给定好友发送图片消息，除非需要获得图片的 ImageId 否则不建议使用此函数
-         * \param id 好友的 QQ 号
-         * \param urls 要发送的图片的 URL
-         * \return （异步）发送出去图片的 ImageId
-         */
+        std::vector<std::string> send_image_message(UserId id, std::span<const std::string> urls);
+        std::vector<std::string> send_image_message(GroupId id, std::span<const std::string> urls);
+        std::vector<std::string> send_image_message(TempId id, std::span<const std::string> urls);
         clu::task<std::vector<std::string>> async_send_image_message(UserId id, std::span<const std::string> urls);
-
-        /**
-         * \brief 异步地向给定群发送图片消息，除非需要获得图片的 ImageId 否则不建议使用此函数
-         * \param id 群号
-         * \param urls 要发送的图片的 URL
-         * \return （异步）发送出去图片的 ImageId
-         */
         clu::task<std::vector<std::string>> async_send_image_message(GroupId id, std::span<const std::string> urls);
-
         /**
-         * \brief 异步地发送图片临时消息，除非需要获得图片的 ImageId 否则不建议使用此函数
-         * \param id 临时会话对象
+         * \brief 向指定对象（好友，群，临时会话）发送图片消息，除非需要获得图片的 ImageId 否则不建议使用此函数
+         * \param id 消息发送的对象
          * \param urls 要发送的图片的 URL
-         * \return （异步）发送出去图片的 ImageId
+         * \return 发送出去图片的 ImageId
          */
         clu::task<std::vector<std::string>> async_send_image_message(TempId id, std::span<const std::string> urls);
 
+        Image upload_image(TargetType type, const std::filesystem::path& path);
         /**
          * \brief 上传图片以获得可用于发送的图片消息段
          * \param type 图片发送目标的类型（好友图片与群图片不通用）
          * \param path 图片文件的路径
-         * \return （异步）上传成功的图片消息段
+         * \return 上传成功的图片消息段
          */
         clu::task<Image> async_upload_image(TargetType type, const std::filesystem::path& path);
 
+        Voice upload_voice(TargetType type, const std::filesystem::path& path);
         /**
          * \brief 上传语音以获得可用于发送的语音消息段
          * \param type 语音发送目标的类型（好友语音与群语音不通用）
          * \param path 语音文件的路径
-         * \return （异步）上传成功的语音消息段
+         * \return 上传成功的语音消息段
          */
         clu::task<Voice> async_upload_voice(TargetType type, const std::filesystem::path& path);
+        /// \}
 
-        /**
-         * \brief 接收 bot 收到的最老的消息和事件，并将这些事件从事件队列中删除
-         * \param count 获取事件个数的上限
-         * \return （异步）获取到的事件
-         */
+        /// \defgroup BotEvent
+        /// \{
+        std::vector<Event> pop_events(size_t count);
+        std::vector<Event> pop_latest_events(size_t count);
+        std::vector<Event> peek_events(size_t count);
+        std::vector<Event> peek_latest_events(size_t count);
         clu::task<std::vector<Event>> async_pop_events(size_t count);
-
-        /**
-         * \brief 接收 bot 收到的最新的消息和事件，并将这些事件从事件队列中删除
-         * \param count 获取事件个数的上限
-         * \return （异步）获取到的事件
-         */
         clu::task<std::vector<Event>> async_pop_latest_events(size_t count);
-
-        /**
-         * \brief 接收 bot 收到的最老的消息和事件
-         * \param count 获取事件个数的上限
-         * \return （异步）获取到的事件
-         */
         clu::task<std::vector<Event>> async_peek_events(size_t count);
-
         /**
-         * \brief 接收 bot 收到的最新的消息和事件
+         * \brief 接收 bot 收到的消息和事件
+         * \details \rst
+         * 使用 ``pop`` 时获取到的事件会从事件队列中删除，而 ``peek`` 不会。
+         * ``latest_events`` 会从事件队列的队尾开始（获取最新的事件），无 ``latest`` 的版本获取事件队列中最早的事件。
+         * \endrst
          * \param count 获取事件个数的上限
-         * \return （异步）获取到的事件
+         * \return 获取到的事件
          */
         clu::task<std::vector<Event>> async_peek_latest_events(size_t count);
 
         clu::task<Event> async_retrieve_message(MessageId id);
         clu::task<size_t> async_count_message();
+        /// \}
 
         clu::task<std::vector<Friend>> async_list_friends();
         clu::task<std::vector<Group>> async_list_groups();
@@ -207,21 +187,33 @@ namespace mpp
         clu::task<MemberInfo> async_get_member_info(GroupId group, UserId user);
         clu::task<void> async_set_member_info(GroupId group, UserId user, const MemberInfo& info);
 
+        /// \defgroup BotMonitor
+        /// \{
+        /**
+         * \brief 启动 Websocket 会话，监听所有种类的事件
+         * \param callback 接收到消息时需要调用的函数
+         * \remark \rst
+         * 回调函数的函数原型须为 ``bool callback(const Event&)``，
+         * 当某次调用回调函数返回 ``true`` 时关闭 Websocket 会话。
+         * \endrst
+         */
+        void monitor_events(clu::function_ref<bool(const Event&)> callback);
+
         /**
          * \brief 异步地启动 Websocket 会话，监听所有种类的事件
          * \param callback 接收到消息时需要调用的函数
-         * \return （异步）无返回值
          * \remark \rst
          * 回调函数的函数原型须为 ``clu::task<bool> callback(const Event&)``，
          * 当某次调用回调函数返回 ``true`` 时，在所有正在进行的回调函数全部执行完成后将会关闭 Websocket 会话。
          * \endrst
          */
         clu::task<void> async_monitor_events(clu::function_ref<clu::task<bool>(const Event&)> callback);
+        /// \}
 
+        SessionConfig get_config();
         clu::task<SessionConfig> async_get_config();
 
-        clu::task<void> async_config(clu::optional_param<int32_t> cache_size = {}, clu::optional_param<bool> enable_websocket = {});
-
+        void config(SessionConfig config);
         clu::task<void> async_config(SessionConfig config);
 
         template <ConcreteEvent E, PatternFor<E>... Ps>
@@ -233,10 +225,11 @@ namespace mpp
         template <ConcreteEvent E, PatternFor<E>... Ps>
         clu::task<std::optional<E>> async_match(const Clock::time_point deadline, Ps&&... patterns)
         {
-            const auto res = co_await clu::race(
-                pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...),
-                async_wait(deadline));
-            if (res.index() == 0) co_return *clu::get<0>(res);
+            if (const auto res = co_await clu::race(
+                    pm_queue_.async_enqueue<E>(std::forward<Ps>(patterns)...),
+                    async_wait(deadline));
+                res.index() == 0)
+                co_return *clu::get<0>(res);
             co_return std::nullopt;
         }
 
@@ -246,19 +239,20 @@ namespace mpp
             return async_match<E>(Clock::now() + timeout, std::forward<Ps>(patterns)...);
         }
 
+        /// \defgroup BotAsyncWait
+        /// \{
         /**
          * \brief 异步等待直到某时间点
          * \param tp 等待的到期时间
-         * \return （异步）无返回值
          */
         clu::cancellable_task<bool> async_wait(const Clock::time_point tp) { return net_client_.async_wait(tp); }
 
         /**
          * \brief 异步等待给定时长
          * \param dur 等待的时长
-         * \return （异步）无返回值
          */
         clu::cancellable_task<bool> async_wait(const Clock::duration dur) { return net_client_.async_wait(Clock::now() + dur); }
+        /// \}
 
         void run() { net_client_.run(); } ///< 阻塞当前线程执行 I/O，直到所有 I/O 处理完成，可从多个线程调用
 

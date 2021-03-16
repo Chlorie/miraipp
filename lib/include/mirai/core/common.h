@@ -38,7 +38,7 @@ namespace mpp
     };
 
     /// 消息号
-    struct [[nodiscard]] MessageId final
+    struct MessageId final
     {
         int32_t id = 0; ///< 整数 id
         constexpr MessageId() = default; ///< 构造一个空消息号

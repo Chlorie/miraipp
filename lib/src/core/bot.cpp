@@ -34,53 +34,116 @@ namespace mpp
         }
     }
 
+    // Request body
+    namespace
+    {
+        std::string release_body(const Bot* bot)
+        {
+            return fmt::format(R"({{"sessionKey":{},"qq":{}}})",
+                detail::JsonQuoted{ bot->session_key() }, bot->id().id);
+        }
+
+        std::string send_message_body(const Bot* bot,
+            const int64_t id, const Message& message, const clu::optional_param<MessageId> quote)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", id);
+                scope.add_entry("messageChain", message);
+                if (quote) scope.add_entry("quote", quote->id);
+            });
+        }
+
+        std::string send_message_body(const Bot* bot,
+            const TempId id, const Message& message, const clu::optional_param<MessageId> quote)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("qq", id.uid.id);
+                scope.add_entry("group", id.gid.id);
+                scope.add_entry("messageChain", message);
+                if (quote) scope.add_entry("quote", quote->id);
+            });
+        }
+
+        template <typename Id>
+        std::string target_id_body(const Bot* bot, const Id id)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", id.id);
+            });
+        }
+
+        std::string send_image_message_body(const Bot* bot, const UserId id, const std::span<const std::string> urls)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("qq", id.id);
+                scope.add_entry("urls", urls);
+            });
+        }
+
+        std::string send_image_message_body(const Bot* bot, const GroupId id, const std::span<const std::string> urls)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("group", id.id);
+                scope.add_entry("urls", urls);
+            });
+        }
+
+        std::string send_image_message_body(const Bot* bot, const TempId id, const std::span<const std::string> urls)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("qq", id.uid.id);
+                scope.add_entry("group", id.gid.id);
+                scope.add_entry("urls", urls);
+            });
+        }
+
+        std::string upload_file_body(const Bot* bot,
+            const TargetType type, const std::string_view key, const std::filesystem::path& path)
+        {
+            using detail::MultipartBuilder;
+
+            MultipartBuilder builder;
+            builder.add_key_value("sessionKey", bot->session_key());
+            builder.add_key_value("type", to_string_view(type));
+            builder.add_file(key, path);
+
+            return builder.take_string();
+        }
+
+        std::string config_body(const Bot* bot, const SessionConfig config)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                if (config.cache_size) scope.add_entry("cacheSize", *config.cache_size);
+                if (config.enable_websocket) scope.add_entry("enableWebsocket", *config.enable_websocket);
+            });
+        }
+    }
+
     std::string Bot::check_auth_gen_body(const std::string_view auth_key) const
     {
         if (authorized()) throw std::runtime_error("一个 Bot 实例只能绑定一个 bot 账号");
         return fmt::format(R"({{"authKey":{}}})", detail::JsonQuoted{ auth_key });
-    }
-
-    std::string Bot::release_body() const
-    {
-        return fmt::format(R"({{"sessionKey":{},"qq":{}}})",
-            detail::JsonQuoted{ sess_key_ }, bot_id_.id);
-    }
-
-    std::string Bot::send_message_body(
-        const int64_t id, const Message& message, const clu::optional_param<MessageId> quote) const
-    {
-        return detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", id);
-            scope.add_entry("messageChain", message);
-            if (quote) scope.add_entry("quote", quote->id);
-        });
-    }
-
-    std::string Bot::send_message_body(
-        const TempId id, const Message& message, const clu::optional_param<MessageId> quote) const
-    {
-        return detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("qq", id.uid.id);
-            scope.add_entry("group", id.gid.id);
-            scope.add_entry("messageChain", message);
-            if (quote) scope.add_entry("quote", quote->id);
-        });
-    }
-
-    std::string Bot::group_target_body(GroupId group) const
-    {
-        return detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-        });
     }
 
     Event Bot::parse_event(const detail::JsonElem json)
@@ -144,14 +207,16 @@ namespace mpp
 
     void Bot::release()
     {
-        (void)get_checked_response_json(net_client_.http_post_json("/release", release_body()));
+        (void)get_checked_response_json(
+            net_client_.http_post_json("/release", release_body(this)));
         bot_id_ = {};
         sess_key_.clear();
     }
 
     clu::task<void> Bot::async_release()
     {
-        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/release", release_body()));
+        (void)get_checked_response_json(
+            co_await net_client_.async_http_post_json("/release", release_body(this)));
         bot_id_ = {};
         sess_key_.clear();
     }
@@ -159,21 +224,21 @@ namespace mpp
     MessageId Bot::send_message(const UserId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            net_client_.http_post_json("/sendFriendMessage", send_message_body(id.id, message, quote)));
+            net_client_.http_post_json("/sendFriendMessage", send_message_body(this, id.id, message, quote)));
         return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
     MessageId Bot::send_message(const GroupId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            net_client_.http_post_json("/sendGroupMessage", send_message_body(id.id, message, quote)));
+            net_client_.http_post_json("/sendGroupMessage", send_message_body(this, id.id, message, quote)));
         return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
     MessageId Bot::send_message(const TempId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            net_client_.http_post_json("/sendTempMessage", send_message_body(id, message, quote)));
+            net_client_.http_post_json("/sendTempMessage", send_message_body(this, id, message, quote)));
         return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -181,7 +246,7 @@ namespace mpp
         const UserId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendFriendMessage", send_message_body(id.id, message, quote)));
+            co_await net_client_.async_http_post_json("/sendFriendMessage", send_message_body(this, id.id, message, quote)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -189,7 +254,7 @@ namespace mpp
         const GroupId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendGroupMessage", send_message_body(id.id, message, quote)));
+            co_await net_client_.async_http_post_json("/sendGroupMessage", send_message_body(this, id.id, message, quote)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
     }
 
@@ -197,93 +262,125 @@ namespace mpp
         const TempId id, const Message& message, const clu::optional_param<MessageId> quote)
     {
         const auto res = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendTempMessage", send_message_body(id, message, quote)));
+            co_await net_client_.async_http_post_json("/sendTempMessage", send_message_body(this, id, message, quote)));
         co_return MessageId(detail::from_json<int32_t>(res["messageId"]));
+    }
+
+    void Bot::recall(const MessageId id)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/recall", target_id_body(this, id)));
     }
 
     clu::task<void> Bot::async_recall(const MessageId id)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", id.id);
-        });
-        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/recall", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json(
+            "/recall", target_id_body(this, id)));
+    }
+
+    std::vector<std::string> Bot::send_image_message(const UserId id, const std::span<const std::string> urls)
+    {
+        const auto json = get_checked_response_json(net_client_.http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
+        return detail::from_json<std::vector<std::string>>(json);
+    }
+
+    std::vector<std::string> Bot::send_image_message(const GroupId id, const std::span<const std::string> urls)
+    {
+        const auto json = get_checked_response_json(net_client_.http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
+        return detail::from_json<std::vector<std::string>>(json);
+    }
+
+    std::vector<std::string> Bot::send_image_message(const TempId id, const std::span<const std::string> urls)
+    {
+        const auto json = get_checked_response_json(net_client_.http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
+        return detail::from_json<std::vector<std::string>>(json);
     }
 
     clu::task<std::vector<std::string>> Bot::async_send_image_message(
         const UserId id, const std::span<const std::string> urls)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("qq", id.id);
-            scope.add_entry("urls", urls);
-        });
-        const auto json = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
+        const auto json = get_checked_response_json(co_await net_client_.async_http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
         co_return detail::from_json<std::vector<std::string>>(json);
     }
 
     clu::task<std::vector<std::string>> Bot::async_send_image_message(
         const GroupId id, const std::span<const std::string> urls)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("group", id.id);
-            scope.add_entry("urls", urls);
-        });
-        const auto json = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
+        const auto json = get_checked_response_json(co_await net_client_.async_http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
         co_return detail::from_json<std::vector<std::string>>(json);
     }
 
     clu::task<std::vector<std::string>> Bot::async_send_image_message(
         const TempId id, const std::span<const std::string> urls)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("qq", id.uid.id);
-            scope.add_entry("group", id.gid.id);
-            scope.add_entry("urls", urls);
-        });
-        const auto json = get_checked_response_json(
-            co_await net_client_.async_http_post_json("/sendImageMessage", std::move(body)));
+        const auto json = get_checked_response_json(co_await net_client_.async_http_post_json(
+            "/sendImageMessage", send_image_message_body(this, id, urls)));
         co_return detail::from_json<std::vector<std::string>>(json);
+    }
+
+    Image Bot::upload_image(const TargetType type, const std::filesystem::path& path)
+    {
+        auto res = get_checked_response_json(net_client_.http_post(
+            "/uploadImage", detail::MultipartBuilder::content_type,
+            upload_file_body(this, type, "img", path)));
+        return Image::from_json(res.value());
     }
 
     clu::task<Image> Bot::async_upload_image(const TargetType type, const std::filesystem::path& path)
     {
-        using detail::MultipartBuilder;
-
-        MultipartBuilder builder;
-        builder.add_key_value("sessionKey", sess_key_);
-        builder.add_key_value("type", to_string_view(type));
-        builder.add_file("img", path);
-
         auto res = get_checked_response_json(co_await net_client_.async_http_post(
-            "/uploadImage", MultipartBuilder::content_type, builder.take_string()));
+            "/uploadImage", detail::MultipartBuilder::content_type,
+            upload_file_body(this, type, "img", path)));
         co_return Image::from_json(res.value());
+    }
+
+    Voice Bot::upload_voice(const TargetType type, const std::filesystem::path& path)
+    {
+        auto res = get_checked_response_json(net_client_.http_post(
+            "/uploadVoice", detail::MultipartBuilder::content_type,
+            upload_file_body(this, type, "voice", path)));
+        return Voice::from_json(res.value());
     }
 
     clu::task<Voice> Bot::async_upload_voice(const TargetType type, const std::filesystem::path& path)
     {
-        using detail::MultipartBuilder;
-
-        MultipartBuilder builder;
-        builder.add_key_value("sessionKey", sess_key_);
-        builder.add_key_value("type", to_string_view(type));
-        builder.add_file("voice", path);
-
         auto res = get_checked_response_json(co_await net_client_.async_http_post(
-            "/uploadVoice", MultipartBuilder::content_type, builder.take_string()));
+            "/uploadVoice", detail::MultipartBuilder::content_type,
+            upload_file_body(this, type, "voice", path)));
         co_return Voice::from_json(res.value());
+    }
+
+    std::vector<Event> Bot::pop_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/fetchMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
+    }
+
+    std::vector<Event> Bot::pop_latest_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/fetchLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
+    }
+
+    std::vector<Event> Bot::peek_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
+    }
+
+    std::vector<Event> Bot::peek_latest_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/peekLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
     }
 
     clu::task<std::vector<Event>> Bot::async_pop_events(const size_t count)
@@ -377,13 +474,13 @@ namespace mpp
     clu::task<void> Bot::async_mute_all(const GroupId group)
     {
         (void)get_checked_response_json(co_await net_client_.async_http_post_json(
-            "/muteAll", group_target_body(group)));
+            "/muteAll", target_id_body(this, group)));
     }
 
     clu::task<void> Bot::async_unmute_all(const GroupId group)
     {
         (void)get_checked_response_json(co_await net_client_.async_http_post_json(
-            "/unmuteAll", group_target_body(group)));
+            "/unmuteAll", target_id_body(this, group)));
     }
 
     clu::task<void> Bot::async_kick(const GroupId group, const UserId user, const std::string_view reason)
@@ -402,7 +499,7 @@ namespace mpp
     clu::task<void> Bot::async_quit(const GroupId group)
     {
         (void)get_checked_response_json(co_await net_client_.async_http_post_json(
-            "/quit", group_target_body(group)));
+            "/quit", target_id_body(this, group)));
     }
 
     clu::task<void> Bot::async_respond(
@@ -495,6 +592,24 @@ namespace mpp
         (void)get_checked_response_json(co_await net_client_.async_http_post_json("/memberInfo", std::move(body)));
     }
 
+    void Bot::monitor_events(const clu::function_ref<bool(const Event&)> callback)
+    {
+        net::WebsocketSession ws = net_client_.new_websocket_session();
+        net_client_.connect_websocket(ws, fmt::format("/all?sessionKey={}", sess_key_));
+        clu::scope_exit _ = [&] { ws.close(); };
+
+        while (true)
+        {
+            try
+            {
+                auto json = parser.parse(ws.read());
+                check_json(json);
+                if (callback(parse_event(json.value()))) break;
+            }
+            catch (...) { log_exception(); }
+        }
+    }
+
     clu::task<void> Bot::async_monitor_events(const clu::function_ref<clu::task<bool>(const Event&)> callback)
     {
         net::WebsocketSession ws = net_client_.new_websocket_session();
@@ -528,6 +643,13 @@ namespace mpp
         co_await ws.async_close();
     }
 
+    SessionConfig Bot::get_config()
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/config?sessionKey={}", sess_key_)));
+        return detail::from_json<SessionConfig>(json);
+    }
+
     clu::task<SessionConfig> Bot::async_get_config()
     {
         const auto json = get_checked_response_json(co_await net_client_.async_http_get(
@@ -535,17 +657,15 @@ namespace mpp
         co_return detail::from_json<SessionConfig>(json);
     }
 
-    clu::task<void> Bot::async_config(const clu::optional_param<int32_t> cache_size, const clu::optional_param<bool> enable_websocket)
+    void Bot::config(const SessionConfig config)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            if (cache_size) scope.add_entry("cacheSize", *cache_size);
-            if (enable_websocket) scope.add_entry("enableWebsocket", *enable_websocket);
-        });
-        (void)get_checked_response_json(co_await net_client_.async_http_post_json("/config", std::move(body)));
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/config", config_body(this, config)));
     }
 
-    clu::task<void> Bot::async_config(const SessionConfig config) { return async_config(config.cache_size, config.enable_websocket); }
+    clu::task<void> Bot::async_config(const SessionConfig config)
+    {
+        (void)get_checked_response_json(co_await net_client_.async_http_post_json(
+            "/config", config_body(this, config)));
+    }
 }

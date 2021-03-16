@@ -27,3 +27,18 @@ mirai-api-http 会话管理
 ........
 .. doxygengroup:: BotSendMsg
    :content-only:
+
+消息和事件获取
+..............
+.. doxygengroup:: BotEvent
+   :content-only:
+
+WebSocket 消息监听
+..................
+.. doxygengroup:: BotMonitor
+   :content-only:
+
+异步延时
+........
+.. doxygengroup:: BotAsyncWait
+   :content-only:

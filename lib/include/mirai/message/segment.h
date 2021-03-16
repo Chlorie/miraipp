@@ -107,8 +107,8 @@ namespace mpp
         template <std::convertible_to<std::string_view> T>
         bool operator==(const T& other) const noexcept
         {
-            const std::string_view sv = other;
-            if (const auto* ptr = get_if<Plain>())
+            if (const std::string_view sv = other;
+                const auto* ptr = get_if<Plain>())
                 return ptr->text == sv;
             return false;
         }

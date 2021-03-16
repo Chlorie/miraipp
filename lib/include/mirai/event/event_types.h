@@ -13,17 +13,17 @@ namespace mpp
         Friend sender; ///< 消息的发送者
 
         /**
-         * \brief 异步地向消息发送者发送消息
+         * \brief 向消息发送者发送消息
          * \param message 消息内容
          * \param quote （可选）要引用回复的消息 id
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
-         * \brief 异步地引用回复本消息
+         * \brief 引用回复本消息
          * \param message 消息内容
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         clu::task<MessageId> async_quote_reply(const Message& message) const { return async_send_message(message, msg.source.id); }
 
