@@ -59,6 +59,7 @@ find_package(Boost REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(Threads)
 find_package(simdjson CONFIG REQUIRED)
+find_package(unifex CONFIG REQUIRED)
 
 target_sources(miraipp PRIVATE ${HEADERS} ${SOURCES})
 target_set_options(miraipp)
@@ -76,6 +77,7 @@ PUBLIC
     clu
     fmt::fmt
     simdjson::simdjson
+    unifex::unifex
 )
 
 if (MIRAI_INSTALL)

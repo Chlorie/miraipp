@@ -4,6 +4,8 @@
 #include <clu/scope.h>
 #include <clu/coroutine/async_mutex.h>
 #include <clu/coroutine/task.h>
+#include <unifex/task.hpp>
+#include <unifex/async_mutex.hpp>
 
 #include "pattern.h"
 #include "../event/event.h"
@@ -13,7 +15,7 @@ namespace mpp
     class PatternMatcherQueue final
     {
     private:
-        class ItemModel // NOLINT(cppcoreguidelines-special-member-functions)
+        class ItemModel
         {
         private:
             std::atomic_bool done_{ false };
@@ -90,10 +92,10 @@ namespace mpp
 
             bool match(const Event& ev) override
             {
-                const E* ptr = ev.get_if<E>();
-                if (ptr && std::apply([&](const Ps&... ps) { return match_with(*ptr, ps...); }, patterns_))
+                if (const E* ptr = ev.get_if<E>();
+                    ptr && std::apply([&](const Ps&... ps) { return match_with(*ptr, ps...); }, patterns_))
                 {
-                    event_ = std::move(*ptr);
+                    event_ = *ptr;
                     if (!set_done())
                     {
                         handle_.resume();
@@ -112,11 +114,11 @@ namespace mpp
         using Awaitable = typename ItemImpl<E, Ps...>::Awaitable;
 
         template <ConcreteEvent E, typename... Ps> requires (PatternFor<std::remove_cv_t<Ps>, E> && ...)
-        Awaitable<E, std::remove_cv_t<Ps>...> async_enqueue(Ps&&... patterns)
+        Awaitable<E, std::remove_cv_t<Ps>...> enqueue_async(Ps&&... patterns)
         {
             return Awaitable<E, std::remove_cv_t<Ps>...>(this, std::forward<Ps>(patterns)...);
         }
 
-        clu::task<bool> async_match_event(const Event& ev);
+        clu::task<bool> match_event_async(const Event& ev);
     };
 }

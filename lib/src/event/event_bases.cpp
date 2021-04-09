@@ -8,10 +8,10 @@ namespace mpp
         return { .msg = SentMessage::from_json(json["messageChain"]) };
     }
 
-    clu::task<MessageId> GroupEventBase::async_send_message(
+    ex::task<MessageId> GroupEventBase::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
-        return bot().async_send_message(group.id, message, quote);
+        return bot().send_message_async(group.id, message, quote);
     }
 
     GroupEventBase GroupEventBase::from_json(const detail::JsonElem json)
@@ -35,20 +35,20 @@ namespace mpp
         };
     }
 
-    clu::task<MessageId> MemberEventBase::async_send_message(
+    ex::task<MessageId> MemberEventBase::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
-        return bot().async_send_message(member.group.id, message, quote);
+        return bot().send_message_async(member.group.id, message, quote);
     }
 
-    clu::task<> MemberEventBase::async_mute_member(const std::chrono::seconds duration) const
+    ex::task<void> MemberEventBase::mute_member_async(const std::chrono::seconds duration) const
     {
-        return bot().async_mute(member.group.id, member.id, duration);
+        return bot().mute_async(member.group.id, member.id, duration);
     }
 
-    clu::task<> MemberEventBase::async_unmute_member() const
+    ex::task<void> MemberEventBase::unmute_member_async() const
     {
-        return bot().async_unmute(member.group.id, member.id);
+        return bot().unmute_async(member.group.id, member.id);
     }
 
     MemberEventBase MemberEventBase::from_json(const detail::JsonElem json)

@@ -18,14 +18,14 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return 已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
+        ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 引用回复本消息
          * \param message 消息内容
          * \return 已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_quote_reply(const Message& message) const { return async_send_message(message, msg.source.id); }
+        ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg.source.id); }
 
         static FriendMessageEvent from_json(detail::JsonElem json);
     };
@@ -45,22 +45,22 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
+        ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地引用回复本消息
          * \param message 消息内容
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_quote_reply(const Message& message) const { return async_send_message(message, msg.source.id); }
+        ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg.source.id); }
 
-        clu::task<> async_recall() const; ///< 异步地撤回该消息
+        ex::task<void> recall_async() const; ///< 异步地撤回该消息
 
         /**
          * \brief 异步地禁言该消息发送者
          * \param duration 禁言时长
          */
-        clu::task<> async_mute_sender(std::chrono::seconds duration) const;
+        ex::task<void> mute_sender_async(std::chrono::seconds duration) const;
 
         static GroupMessageEvent from_json(detail::JsonElem json);
     };
@@ -78,14 +78,14 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
+        ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地引用回复本消息
          * \param message 消息内容
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_quote_reply(const Message& message) const { return async_send_message(message, msg.source.id); }
+        ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg.source.id); }
 
         static TempMessageEvent from_json(detail::JsonElem json);
     };
@@ -183,7 +183,7 @@ namespace mpp
          * \param message 消息内容
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_quote_reply(const Message& message) const { return async_send_message(message, msg_id); }
+        ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg_id); }
 
         static GroupRecallEvent from_json(detail::JsonElem json);
     };
@@ -202,7 +202,7 @@ namespace mpp
          * \param message 消息内容
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_quote_reply(const Message& message) const;
+        ex::task<MessageId> quote_reply_async(const Message& message) const;
 
         static FriendRecallEvent from_json(detail::JsonElem json);
     };
@@ -332,7 +332,7 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
-        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+        ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static NewFriendRequestEvent from_json(detail::JsonElem json);
     };
@@ -357,7 +357,7 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
-        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+        ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static MemberJoinRequestEvent from_json(detail::JsonElem json);
     };
@@ -378,7 +378,7 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
-        clu::task<> async_respond(ResponseType response, std::string_view reason) const;
+        ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static BotInvitedJoinGroupRequestEvent from_json(detail::JsonElem json);
     };
