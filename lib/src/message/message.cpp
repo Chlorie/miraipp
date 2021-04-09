@@ -70,7 +70,7 @@ namespace mpp
 
     bool Message::starts_with(const Message& prefix) const
     {
-        
+        return false; // TODO: implement
     }
 
     std::string Message::collect_text() const

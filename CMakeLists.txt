@@ -25,7 +25,9 @@ function (target_set_options TGT)
         # /Zc:__cplusplus is needed for MSVC to produce correct value for the __cplusplus macro
         # If this option is not on, __cplusplus will always expands to 199711L
         if (MSVC_VERSION GREATER_EQUAL 1914)
-            target_compile_options(${TGT} PUBLIC "/Zc:__cplusplus")
+            target_compile_options(${TGT} PUBLIC
+                "/Zc:__cplusplus"
+                "/Zc:externConstexpr")
         endif ()
     endif ()
 

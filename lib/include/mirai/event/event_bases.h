@@ -1,6 +1,6 @@
 #pragma once
 
-#include <clu/coroutine/task.h>
+#include <unifex/task.hpp>
 #include <clu/optional_ref.h>
 
 #include "event.h"
@@ -9,6 +9,8 @@
 
 namespace mpp
 {
+    namespace ex = unifex;
+
     /// 消息事件基类
     struct MessageEventBase : EventBase
     {
@@ -31,7 +33,7 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
+        ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         static GroupEventBase from_json(detail::JsonElem json);
     };
@@ -69,15 +71,15 @@ namespace mpp
          * \param quote （可选）要引用回复的消息 id
          * \return （异步）已发送消息的 id，用于撤回和引用回复
          */
-        clu::task<MessageId> async_send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
+        ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
         /**
          * \brief 异步地禁言与当前事件关联的群成员
          * \param duration 禁言时长
          */
-        clu::task<> async_mute_member(std::chrono::seconds duration) const;
+        ex::task<void> mute_member_async(std::chrono::seconds duration) const;
 
-        clu::task<> async_unmute_member() const; ///< 异步地解禁与当前事件关联的群成员
+        ex::task<void> unmute_member_async() const; ///< 异步地解禁与当前事件关联的群成员
 
         static MemberEventBase from_json(detail::JsonElem json);
     };

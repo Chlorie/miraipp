@@ -3,8 +3,8 @@
 #include <memory>
 #include <string_view>
 #include <chrono>
-#include <clu/coroutine/task.h>
 #include <clu/coroutine/cancellable_task.h>
+#include <unifex/task.hpp>
 
 namespace boost::asio
 {
@@ -13,6 +13,7 @@ namespace boost::asio
 
 namespace mpp::net
 {
+    namespace ex = unifex;
     using TimePoint = std::chrono::steady_clock::time_point;
 
     class WebsocketSession;
@@ -37,17 +38,17 @@ namespace mpp::net
         std::string_view host() const;
 
         std::string http_get(std::string_view target);
-        clu::task<std::string> async_http_get(std::string_view target);
+        ex::task<std::string> http_get_async(std::string_view target);
         std::string http_post(std::string_view target, std::string_view content_type, std::string body);
-        clu::task<std::string> async_http_post(std::string_view target, std::string_view content_type, std::string body);
+        ex::task<std::string> http_post_async(std::string_view target, std::string_view content_type, std::string body);
         std::string http_post_json(std::string_view target, std::string body);
-        clu::task<std::string> async_http_post_json(std::string_view target, std::string body);
+        ex::task<std::string> http_post_json_async(std::string_view target, std::string body);
 
-        clu::cancellable_task<bool> async_wait(TimePoint tp);
+        ex::task<void> wait_async(TimePoint tp);
 
         WebsocketSession new_websocket_session();
         void connect_websocket(WebsocketSession& ws, std::string_view target);
-        clu::task<> async_connect_websocket(WebsocketSession& ws, std::string_view target);
+        ex::task<void> connect_websocket_async(WebsocketSession& ws, std::string_view target);
 
         Impl* pimpl_ptr() const { return impl_.get(); }
     };
@@ -67,9 +68,9 @@ namespace mpp::net
         WebsocketSession& operator=(WebsocketSession&&) noexcept;
 
         std::string read();
-        clu::task<std::string> async_read();
+        ex::task<std::string> read_async();
         void close();
-        clu::task<> async_close();
+        ex::task<void> close_async();
 
         Impl* pimpl_ptr() const { return impl_.get(); }
     };

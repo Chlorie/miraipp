@@ -4,7 +4,8 @@
             "kind": "git",
             "repository": "https://github.com/Chlorie/vcpkg-ports",
             "packages": [
-                "clu"
+                "clu",
+                "unifex"
             ]
         }
     ]

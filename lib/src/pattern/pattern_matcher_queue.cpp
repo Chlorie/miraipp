@@ -2,7 +2,7 @@
 
 namespace mpp
 {
-    clu::task<bool> PatternMatcherQueue::async_match_event(const Event& ev)
+    clu::task<bool> PatternMatcherQueue::match_event_async(const Event& ev)
     {
         auto lock = co_await mutex_.async_lock_scoped();
         bool matched = false;

@@ -15,10 +15,10 @@ namespace mpp
         MessageId get_mid(const detail::JsonRes json) { return MessageId(detail::from_json<int32_t>(json)); }
     }
 
-    clu::task<MessageId> FriendMessageEvent::async_send_message(
+    ex::task<MessageId> FriendMessageEvent::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
-        return bot().async_send_message(sender.id, message, quote);
+        return bot().send_message_async(sender.id, message, quote);
     }
 
     FriendMessageEvent FriendMessageEvent::from_json(const detail::JsonElem json)
@@ -30,20 +30,20 @@ namespace mpp
         };
     }
 
-    clu::task<MessageId> GroupMessageEvent::async_send_message(
+    ex::task<MessageId> GroupMessageEvent::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
-        return bot().async_send_message(sender.group.id, message, quote);
+        return bot().send_message_async(sender.group.id, message, quote);
     }
 
-    clu::task<> GroupMessageEvent::async_recall() const
+    ex::task<void> GroupMessageEvent::recall_async() const
     {
-        return bot().async_recall(msg.source.id);
+        return bot().recall_async(msg.source.id);
     }
 
-    clu::task<> GroupMessageEvent::async_mute_sender(const std::chrono::seconds duration) const
+    ex::task<void> GroupMessageEvent::mute_sender_async(const std::chrono::seconds duration) const
     {
-        return bot().async_mute(sender.group.id, sender.id, duration);
+        return bot().mute_async(sender.group.id, sender.id, duration);
     }
 
     GroupMessageEvent GroupMessageEvent::from_json(const detail::JsonElem json)
@@ -55,10 +55,10 @@ namespace mpp
         };
     }
 
-    clu::task<MessageId> TempMessageEvent::async_send_message(
+    ex::task<MessageId> TempMessageEvent::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
-        return bot().async_send_message(TempId{ sender.id, sender.group.id }, message, quote);
+        return bot().send_message_async(TempId{ sender.id, sender.group.id }, message, quote);
     }
 
     TempMessageEvent TempMessageEvent::from_json(const detail::JsonElem json)
@@ -152,9 +152,9 @@ namespace mpp
         };
     }
 
-    clu::task<MessageId> FriendRecallEvent::async_quote_reply(const Message& message) const
+    ex::task<MessageId> FriendRecallEvent::quote_reply_async(const Message& message) const
     {
-        return bot().async_send_message(sender_id, message, msg_id);
+        return bot().send_message_async(sender_id, message, msg_id);
     }
 
     FriendRecallEvent FriendRecallEvent::from_json(const detail::JsonElem json)
@@ -271,10 +271,10 @@ namespace mpp
         return { MemberExecutorEventBase::from_json(json) };
     }
 
-    clu::task<> NewFriendRequestEvent::async_respond(
+    ex::task<void> NewFriendRequestEvent::respond_async(
         const ResponseType response, const std::string_view reason) const
     {
-        return bot().async_respond(*this, response, reason);
+        return bot().respond_async(*this, response, reason);
     }
 
     NewFriendRequestEvent NewFriendRequestEvent::from_json(const detail::JsonElem json)
@@ -289,10 +289,10 @@ namespace mpp
         };
     }
 
-    clu::task<> MemberJoinRequestEvent::async_respond(
+    ex::task<void> MemberJoinRequestEvent::respond_async(
         const ResponseType response, const std::string_view reason) const
     {
-        return bot().async_respond(*this, response, reason);
+        return bot().respond_async(*this, response, reason);
     }
 
     MemberJoinRequestEvent MemberJoinRequestEvent::from_json(const detail::JsonElem json)
@@ -308,10 +308,10 @@ namespace mpp
         };
     }
 
-    clu::task<> BotInvitedJoinGroupRequestEvent::async_respond(
+    ex::task<void> BotInvitedJoinGroupRequestEvent::respond_async(
         const ResponseType response, const std::string_view reason) const
     {
-        return bot().async_respond(*this, response, reason);
+        return bot().respond_async(*this, response, reason);
     }
 
     BotInvitedJoinGroupRequestEvent BotInvitedJoinGroupRequestEvent::from_json(const detail::JsonElem json)
