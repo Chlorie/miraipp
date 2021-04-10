@@ -3,20 +3,17 @@
 #include <optional>
 #include <string>
 
+#include "segment_types_fwd.h"
 #include "../core/common.h"
-#include "../detail/json.h"
+#include "../core/export.h"
+#include "../core/format.h"
+#include "../detail/json_fwd.h"
 
 namespace mpp
 {
-    /// 消息段类型枚举
-    enum class SegmentType : uint8_t
-    {
-        at, at_all, face, plain, image,
-        flash_image, voice, xml, json, app, poke
-    };
-
+    MPP_SUPPRESS_EXPORT_WARNING
     /// at 消息段
-    struct At final
+    struct MPP_API At final
     {
         static constexpr SegmentType type = SegmentType::at;
 
@@ -31,7 +28,7 @@ namespace mpp
     };
 
     /// at 全体成员消息段
-    struct AtAll final
+    struct MPP_API AtAll final
     {
         static constexpr SegmentType type = SegmentType::at_all;
 
@@ -39,11 +36,11 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "@全体成员"); }
         void format_as_json(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), R"({{"type":"AtAll"}})"); }
-        static AtAll from_json(detail::JsonElem) { return {}; }
+        static AtAll from_json(detail::JsonElem);
     };
 
     /// QQ 表情消息段
-    struct Face final
+    struct MPP_API Face final
     {
         static constexpr SegmentType type = SegmentType::face;
 
@@ -58,7 +55,7 @@ namespace mpp
     };
 
     /// 纯文本消息段
-    struct Plain final
+    struct MPP_API Plain final
     {
         static constexpr SegmentType type = SegmentType::plain;
 
@@ -69,11 +66,11 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "{}", text); }
         void format_as_json(fmt::format_context& ctx) const;
-        static Plain from_json(const detail::JsonElem json) { return { std::string(json["text"]) }; }
+        static Plain from_json(detail::JsonElem json);
     };
 
     /// 图片消息段
-    struct Image final
+    struct MPP_API Image final
     {
         static constexpr SegmentType type = SegmentType::image;
 
@@ -89,7 +86,7 @@ namespace mpp
     };
 
     /// 闪照消息段
-    struct FlashImage final
+    struct MPP_API FlashImage final
     {
         static constexpr SegmentType type = SegmentType::flash_image;
 
@@ -105,7 +102,7 @@ namespace mpp
     };
 
     /// 语音消息段
-    struct Voice final
+    struct MPP_API Voice final
     {
         static constexpr SegmentType type = SegmentType::voice;
 
@@ -121,7 +118,7 @@ namespace mpp
     };
 
     /// xml 消息段
-    struct Xml final
+    struct MPP_API Xml final
     {
         static constexpr SegmentType type = SegmentType::xml;
 
@@ -131,11 +128,11 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "{}", xml); }
         void format_as_json(fmt::format_context& ctx) const;
-        static Xml from_json(const detail::JsonElem json) { return { std::string(json["xml"]) }; }
+        static Xml from_json(detail::JsonElem json);
     };
 
     /// json 消息段
-    struct Json final
+    struct MPP_API Json final
     {
         static constexpr SegmentType type = SegmentType::json;
 
@@ -145,11 +142,11 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "{}", json); }
         void format_as_json(fmt::format_context& ctx) const;
-        static Json from_json(const detail::JsonElem json) { return { std::string(json["json"]) }; }
+        static Json from_json(detail::JsonElem json);
     };
 
     /// 小程序消息段
-    struct App final
+    struct MPP_API App final
     {
         static constexpr SegmentType type = SegmentType::app;
 
@@ -159,11 +156,11 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "{}", content); }
         void format_as_json(fmt::format_context& ctx) const;
-        static App from_json(const detail::JsonElem json) { return { std::string(json["content"]) }; }
+        static App from_json(detail::JsonElem json);
     };
 
     /// 戳一戳消息段
-    struct Poke final
+    struct MPP_API Poke final
     {
         static constexpr SegmentType type = SegmentType::poke;
 
@@ -173,9 +170,33 @@ namespace mpp
 
         void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "[戳一戳 {}]", name); }
         void format_as_json(fmt::format_context& ctx) const;
-        static Poke from_json(const detail::JsonElem json) { return { std::string(json["name"]) }; }
+        static Poke from_json(detail::JsonElem json);
     };
 
-    /// 消息段组成类型概念
-    template <typename T> concept ConcreteSegment = requires { { T::type } -> std::convertible_to<SegmentType>; };
+    struct ForwardedMessage;
+
+    /// 合并转发消息段
+    struct MPP_API Forward final
+    {
+        static constexpr SegmentType type = SegmentType::forward;
+
+        std::string title; ///< 标题
+        std::string brief; ///< 简介
+        std::string source;
+        std::string summary;
+        std::vector<ForwardedMessage> messages;
+
+        bool operator==(const Forward&) const noexcept = default;
+
+        void format_to(fmt::format_context& ctx) const { fmt::format_to(ctx.out(), "{}", brief); }
+        void format_as_json(fmt::format_context& ctx) const;
+        static Forward from_json(detail::JsonElem json);
+    };
+
+    /// 文件消息段
+    struct MPP_API File final
+    {
+        static constexpr SegmentType type = SegmentType::file;
+    };
+    MPP_RESTORE_EXPORT_WARNING
 }

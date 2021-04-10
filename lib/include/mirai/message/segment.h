@@ -1,13 +1,16 @@
 #pragma once
 
+#include <memory>
+#include <string>
 #include <clu/type_traits.h>
 
 #include "segment_types.h"
 
 namespace mpp
 {
+    MPP_SUPPRESS_EXPORT_WARNING
     /// AnySegment 类存储任意一种消息段类型的对象（类型擦除类）
-    class Segment final
+    class MPP_API Segment final
     {
     private:
         struct Model // NOLINT(cppcoreguidelines-special-member-functions)
@@ -63,6 +66,8 @@ namespace mpp
                 return nullptr;
         }
 
+        bool compare_with_sv(std::string_view sv) const noexcept;
+
     public:
         template <typename T> requires ConcreteSegment<std::remove_cvref_t<T>>
         explicit(false) Segment(T&& segment): // NOLINT(bugprone-forwarding-reference-overload)
@@ -72,19 +77,19 @@ namespace mpp
         explicit(false) Segment(std::string&& text): Segment(Plain{ std::move(text) }) {}
         explicit(false) Segment(const char* text): Segment(Plain{ text }) {}
         template <typename T> requires (std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>)
-        explicit(false) Segment(const T& text): Segment(Plain{ std::string(text) }) {}
+        explicit(false) Segment(const T& text): Segment(std::string(text)) {}
 
         ~Segment() noexcept = default;
         Segment(Segment&&) noexcept = default;
         Segment& operator=(Segment&&) noexcept = default;
 
         Segment(const Segment& other): impl_(other.impl_->clone()) {} ///< 复制一个消息段
-
+        
         Segment& operator=(const std::string& text) { return *this = Plain{ text }; }
         Segment& operator=(std::string&& text) { return *this = Plain{ std::move(text) }; }
         Segment& operator=(const char* text) { return *this = Plain{ text }; }
         template <typename T> requires (std::convertible_to<T, std::string_view> && !std::convertible_to<T, const char*>)
-        Segment& operator=(const T& text) { return *this = Plain{ std::string(text) }; }
+        Segment& operator=(const T& text) { return *this = std::string(text); }
 
         template <typename T> requires ConcreteSegment<std::remove_cvref_t<T>>
         Segment& operator=(T&& segment)
@@ -105,13 +110,7 @@ namespace mpp
         bool operator==(const Segment& other) const noexcept { return *impl_ == *other.impl_; }
 
         template <std::convertible_to<std::string_view> T>
-        bool operator==(const T& other) const noexcept
-        {
-            if (const std::string_view sv = other;
-                const auto* ptr = get_if<Plain>())
-                return ptr->text == sv;
-            return false;
-        }
+        bool operator==(const T& other) const noexcept { return compare_with_sv(other); }
 
         template <ConcreteSegment T>
         bool operator==(const T& other) const noexcept
@@ -120,7 +119,7 @@ namespace mpp
                 return *ptr == other;
             return false;
         }
-
+        
         template <ConcreteSegment T> T& get() & { return get_impl<T>(*this); }
         template <ConcreteSegment T> const T& get() const & { return get_impl<T>(*this); }
         template <ConcreteSegment T> T&& get() && { return get_impl<T>(std::move(*this)); }
@@ -133,4 +132,5 @@ namespace mpp
         void format_as_json(fmt::format_context& ctx) const { impl_->format_as_json(ctx); }
         static Segment from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

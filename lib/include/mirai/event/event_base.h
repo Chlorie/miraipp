@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <concepts>
 
+#include "../core/export.h"
+
 namespace mpp
 {
     /// 事件类型枚举
@@ -21,7 +23,7 @@ namespace mpp
     class Bot;
 
     /// 事件基类
-    class EventBase
+    class MPP_API EventBase
     {
         friend class Bot;
     private:

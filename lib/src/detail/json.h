@@ -2,9 +2,10 @@
 
 #include <optional>
 #include <simdjson.h>
-#include <span>
+#include <ranges>
+#include <clu/concepts.h>
 
-#include "../core/format.h"
+#include "mirai/core/format.h"
 
 namespace mpp::detail
 {
@@ -62,28 +63,7 @@ namespace fmt
 
 namespace mpp::detail
 {
-    template <JsonSerializable T>
-    void format_to_json(fmt::format_context& ctx, const T& value) { value.format_as_json(ctx); }
-
-    template <typename T> requires std::integral<T> || std::floating_point<T>
-    void format_to_json(fmt::format_context& ctx, const T value) { fmt::format_to(ctx.out(), "{}", value); }
-
-    template <std::convertible_to<std::string_view> T>
-    void format_to_json(fmt::format_context& ctx, const T& value)
-    {
-        fmt::format_to(ctx.out(), "{}", JsonQuoted{ value });
-    }
-
-    template <typename T> void format_to_json(fmt::format_context& ctx, std::span<T> span);
-
-    template <typename T>
-    void format_to_json(fmt::format_context& ctx, const std::optional<T>& value)
-    {
-        if (value)
-            format_to_json(ctx, *value);
-        else
-            fmt::format_to(ctx.out(), "null");
-    }
+    template <typename T> void format_to_json(fmt::format_context& ctx, const T& value);
 
     class JsonObjScope final // NOLINT(cppcoreguidelines-special-member-functions)
     {
@@ -123,11 +103,32 @@ namespace mpp::detail
         }
     };
 
+    template <typename T> inline constexpr bool dependent_false = false;
+
     template <typename T>
-    void format_to_json(fmt::format_context& ctx, const std::span<T> span)
+    void format_to_json(fmt::format_context& ctx, const T& value)
     {
-        JsonArrScope scope(ctx);
-        for (const T& elem : span) scope.add_entry(elem);
+        if constexpr (JsonSerializable<T>)
+            value.format_as_json(ctx);
+        else if constexpr (std::integral<T> || std::floating_point<T>)
+            fmt::format_to(ctx.out(), "{}", value);
+        else if constexpr (std::convertible_to<T, std::string_view>)
+            fmt::format_to(ctx.out(), "{}", JsonQuoted{ value });
+        else if constexpr (std::ranges::contiguous_range<T>)
+        {
+            JsonArrScope scope(ctx);
+            for (const auto& elem : value)
+                scope.add_entry(elem);
+        }
+        else if constexpr (clu::template_of<T, std::optional>)
+        {
+            if (value)
+                format_to_json(ctx, *value);
+            else
+                fmt::format_to(ctx.out(), "null");
+        }
+        else
+            static_assert(dependent_false<T>, "this type cannot be serialized to json");
     }
 
     template <typename Inv>

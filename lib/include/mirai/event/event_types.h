@@ -5,8 +5,10 @@
 
 namespace mpp
 {
+    MPP_SUPPRESS_EXPORT_WARNING
+
     /// 私聊消息事件
-    struct FriendMessageEvent final : MessageEventBase
+    struct MPP_API FriendMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::friend_message;
 
@@ -31,7 +33,7 @@ namespace mpp
     };
 
     /// 群聊消息事件
-    struct GroupMessageEvent final : MessageEventBase
+    struct MPP_API GroupMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::group_message;
 
@@ -66,7 +68,7 @@ namespace mpp
     };
 
     /// 临时会话消息事件
-    struct TempMessageEvent final : MessageEventBase
+    struct MPP_API TempMessageEvent final : MessageEventBase
     {
         static constexpr EventType type = EventType::temp_message;
 
@@ -91,7 +93,7 @@ namespace mpp
     };
 
     /// Bot 上线事件
-    struct BotOnlineEvent final : EventBase
+    struct MPP_API BotOnlineEvent final : EventBase
     {
         static constexpr EventType type = EventType::bot_online;
 
@@ -103,7 +105,7 @@ namespace mpp
     };
 
     /// Bot 下线事件
-    struct BotOfflineEvent final : EventBase
+    struct MPP_API BotOfflineEvent final : EventBase
     {
         static constexpr EventType type = EventType::bot_offline;
 
@@ -115,7 +117,7 @@ namespace mpp
     };
 
     /// Bot 群权限变动事件
-    struct BotGroupPermissionChangeEvent final : GroupEventBase
+    struct MPP_API BotGroupPermissionChangeEvent final : GroupEventBase
     {
         static constexpr EventType type = EventType::bot_group_permission_change;
 
@@ -136,7 +138,7 @@ namespace mpp
     };
 
     /// Bot 被解禁事件
-    struct BotUnmutedEvent final : ExecutorEventBase
+    struct MPP_API BotUnmutedEvent final : ExecutorEventBase
     {
         static constexpr EventType type = EventType::bot_unmuted;
 
@@ -144,7 +146,7 @@ namespace mpp
     };
 
     /// Bot 加入新群事件
-    struct BotJoinGroupEvent final : GroupEventBase
+    struct MPP_API BotJoinGroupEvent final : GroupEventBase
     {
         static constexpr EventType type = EventType::bot_join_group;
 
@@ -152,7 +154,7 @@ namespace mpp
     };
 
     /// Bot 退群事件
-    struct BotQuitEvent final : GroupEventBase
+    struct MPP_API BotQuitEvent final : GroupEventBase
     {
         static constexpr EventType type = EventType::bot_quit;
 
@@ -160,7 +162,7 @@ namespace mpp
     };
 
     /// Bot 被踢出群事件
-    struct BotKickedEvent final : GroupEventBase
+    struct MPP_API BotKickedEvent final : GroupEventBase
     {
         static constexpr EventType type = EventType::bot_kicked;
 
@@ -168,7 +170,7 @@ namespace mpp
     };
 
     /// 群消息被撤回事件
-    struct GroupRecallEvent final : GroupExecutorEventBase
+    struct MPP_API GroupRecallEvent final : GroupExecutorEventBase
     {
         static constexpr EventType type = EventType::group_recall;
 
@@ -189,7 +191,7 @@ namespace mpp
     };
 
     /// 私聊消息被撤回事件
-    struct FriendRecallEvent final : EventBase
+    struct MPP_API FriendRecallEvent final : EventBase
     {
         static constexpr EventType type = EventType::friend_recall;
 
@@ -208,7 +210,7 @@ namespace mpp
     };
 
     /// 群名更改事件
-    struct GroupNameChangeEvent final : GroupExecutorEventBase
+    struct MPP_API GroupNameChangeEvent final : GroupExecutorEventBase
     {
         static constexpr EventType type = EventType::group_name_change;
 
@@ -219,7 +221,7 @@ namespace mpp
     };
 
     /// 进群公告变动事件
-    struct GroupEntranceAnnouncementChangeEvent final : GroupExecutorEventBase
+    struct MPP_API GroupEntranceAnnouncementChangeEvent final : GroupExecutorEventBase
     {
         static constexpr EventType type = EventType::group_entrance_announcement_change;
 
@@ -230,7 +232,7 @@ namespace mpp
     };
 
     /// 群功能开启状态变动事件
-    struct GroupConfigEvent final : GroupExecutorEventBase
+    struct MPP_API GroupConfigEvent final : GroupExecutorEventBase
     {
         static constexpr EventType type = EventType::group_config;
 
@@ -243,7 +245,7 @@ namespace mpp
     };
 
     /// 成员加群事件
-    struct MemberJoinEvent final : MemberEventBase
+    struct MPP_API MemberJoinEvent final : MemberEventBase
     {
         static constexpr EventType type = EventType::member_join;
 
@@ -251,7 +253,7 @@ namespace mpp
     };
 
     /// 成员退群事件
-    struct MemberQuitEvent final : MemberEventBase
+    struct MPP_API MemberQuitEvent final : MemberEventBase
     {
         static constexpr EventType type = EventType::member_quit;
 
@@ -259,7 +261,7 @@ namespace mpp
     };
 
     /// 成员被踢出群事件
-    struct MemberKickedEvent final : MemberExecutorEventBase
+    struct MPP_API MemberKickedEvent final : MemberExecutorEventBase
     {
         static constexpr EventType type = EventType::member_kicked;
 
@@ -267,7 +269,7 @@ namespace mpp
     };
 
     /// 成员群名片变动事件
-    struct MemberCardChangeEvent final : MemberExecutorEventBase
+    struct MPP_API MemberCardChangeEvent final : MemberExecutorEventBase
     {
         static constexpr EventType type = EventType::member_card_change;
 
@@ -278,7 +280,7 @@ namespace mpp
     };
 
     /// 成员专属头衔变动事件
-    struct MemberSpecialTitleChangeEvent final : MemberEventBase
+    struct MPP_API MemberSpecialTitleChangeEvent final : MemberEventBase
     {
         static constexpr EventType type = EventType::member_special_title_change;
 
@@ -289,7 +291,7 @@ namespace mpp
     };
 
     /// 成员群权限变动事件
-    struct MemberPermissionChangeEvent final : MemberEventBase
+    struct MPP_API MemberPermissionChangeEvent final : MemberEventBase
     {
         static constexpr EventType type = EventType::member_permission_change;
 
@@ -300,7 +302,7 @@ namespace mpp
     };
 
     /// 成员被禁言事件
-    struct MemberMutedEvent final : MemberExecutorEventBase
+    struct MPP_API MemberMutedEvent final : MemberExecutorEventBase
     {
         static constexpr EventType type = EventType::member_muted;
 
@@ -310,7 +312,7 @@ namespace mpp
     };
 
     /// 成员被解禁事件
-    struct MemberUnmutedEvent final : MemberExecutorEventBase
+    struct MPP_API MemberUnmutedEvent final : MemberExecutorEventBase
     {
         static constexpr EventType type = EventType::member_unmuted;
 
@@ -320,7 +322,7 @@ namespace mpp
     enum class NewFriendResponseType : uint8_t { approve = 0, reject = 1, reject_and_blacklist = 2 };
 
     /// 加好友申请事件
-    struct NewFriendRequestEvent final : EventBase
+    struct MPP_API NewFriendRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::new_friend_request;
 
@@ -344,7 +346,7 @@ namespace mpp
     };
 
     /// 加群申请事件
-    struct MemberJoinRequestEvent final : EventBase
+    struct MPP_API MemberJoinRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::member_join_request;
 
@@ -365,7 +367,7 @@ namespace mpp
     enum class BotInvitedJoinGroupResponseType : uint8_t { approve = 0, reject = 1 };
 
     /// Bot 被邀请入群事件
-    struct BotInvitedJoinGroupRequestEvent final : EventBase
+    struct MPP_API BotInvitedJoinGroupRequestEvent final : EventBase
     {
         static constexpr EventType type = EventType::bot_invited_join_group_request;
 
@@ -382,4 +384,6 @@ namespace mpp
 
         static BotInvitedJoinGroupRequestEvent from_json(detail::JsonElem json);
     };
+
+    MPP_RESTORE_EXPORT_WARNING
 }

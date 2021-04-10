@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "../detail/json.h"
+#include "../detail/json_fwd.h"
 
 namespace mpp
 {

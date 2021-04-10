@@ -9,7 +9,6 @@
 #include "info_types.h"
 #include "config_types.h"
 #include "net_client.h"
-#include "../detail/json.h"
 #include "../message/segment_types_fwd.h"
 #include "../event/event_types_fwd.h"
 // #include "../pattern/pattern_matcher_queue.h"
@@ -20,8 +19,9 @@ namespace mpp
     class Message;
     class Event;
 
+    MPP_SUPPRESS_EXPORT_WARNING
     /// Mirai++ 中功能的核心类型，代表 mirai-api-http 中的一个会话。此类不可复制或移动。
-    class Bot final
+    class MPP_API Bot final
     {
     public:
         using Clock = std::chrono::steady_clock;
@@ -218,7 +218,7 @@ namespace mpp
         ex::task<void> config_async(SessionConfig config);
 
         // Pattern matcher queue needs a major revamp
-        
+
         // template <ConcreteEvent E, PatternFor<E>... Ps>
         // ex::task<E> match_async(Ps&&... patterns)
         // {
@@ -261,8 +261,9 @@ namespace mpp
 
         boost::asio::io_context& io_context() { return net_client_.io_context(); } ///< 返回 bot 内使用的 asio::io_context
     };
+    MPP_RESTORE_EXPORT_WARNING
 
-    void launch_async_bot(
+    MPP_API void launch_async_bot(
         clu::function_ref<ex::task<void>(Bot&)> task, size_t thread_count = 1,
         std::string_view host = "127.0.0.1", std::string_view port = "8080");
 }

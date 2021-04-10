@@ -2,6 +2,9 @@
 
 #include <clu/hash.h>
 
+#include "mirai/message/forwarded_message.h"
+#include "../detail/json.h"
+
 namespace mpp
 {
     Source Source::from_json(const detail::JsonElem json)

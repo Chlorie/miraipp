@@ -1,5 +1,8 @@
 #include "mirai/message/message.h"
 
+#include "mirai/message/forwarded_message.h"
+#include "../detail/json.h"
+
 namespace mpp
 {
     bool Message::starts_with_sv(const std::string_view sv) const

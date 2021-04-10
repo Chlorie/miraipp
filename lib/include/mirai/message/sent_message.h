@@ -1,10 +1,12 @@
 #pragma once
 
 #include "message.h"
+#include "../core/common.h"
 
 namespace mpp
 {
-    struct Source final
+    MPP_SUPPRESS_EXPORT_WARNING
+    struct MPP_API Source final
     {
         MessageId id;
         int32_t time = 0;
@@ -13,7 +15,7 @@ namespace mpp
         static Source from_json(detail::JsonElem json);
     };
 
-    struct Quote final
+    struct MPP_API Quote final
     {
         MessageId id;
         UserId sender;
@@ -24,7 +26,7 @@ namespace mpp
         static Quote from_json(detail::JsonElem json);
     };
 
-    struct SentMessage final
+    struct MPP_API SentMessage final
     {
         Source source;
         std::optional<Quote> quote;
@@ -33,4 +35,5 @@ namespace mpp
         bool operator==(const SentMessage& other) const noexcept { return source == other.source; }
         static SentMessage from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

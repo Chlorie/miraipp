@@ -7,6 +7,7 @@ project(miraipp LANGUAGES CXX VERSION 0.1.2)
 set(CMAKE_SCRIPTS "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SCRIPTS})
 
+option(BUILD_SHARED_LIBS "Build Mirai++ as a shared library" OFF)
 option(MIRAI_BUILD_DOCS "Build Mirai++ documentation" OFF)
 option(MIRAI_BUILD_EXAMPLES "Build code examples" OFF)
 option(MIRAI_INSTALL "Install Mirai++" OFF)

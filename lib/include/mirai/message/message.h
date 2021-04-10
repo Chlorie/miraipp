@@ -8,8 +8,9 @@
 
 namespace mpp
 {
+    MPP_SUPPRESS_EXPORT_WARNING
     /// 表示一条可能由多个消息段 \c Segment 组成的完整消息
-    class Message final
+    class MPP_API Message final
     {
     public:
         using iterator = std::vector<Segment>::iterator;
@@ -164,4 +165,5 @@ namespace mpp
         void format_as_json(fmt::format_context& ctx) const;
         static Message from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

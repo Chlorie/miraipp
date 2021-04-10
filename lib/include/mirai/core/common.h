@@ -67,10 +67,10 @@ namespace mpp
     namespace literals
     {
         /// 使用此 UDL 构造 QQ 号
-        constexpr UserId operator""_uid(const unsigned long long value) noexcept { return UserId{ static_cast<int64_t>(value) }; }
+        constexpr UserId operator""_uid(const unsigned long long value) noexcept { return UserId(static_cast<int64_t>(value)); }
 
         /// 使用此 UDL 构造群号
-        constexpr GroupId operator""_gid(const unsigned long long value) noexcept { return GroupId{ static_cast<int64_t>(value) }; }
+        constexpr GroupId operator""_gid(const unsigned long long value) noexcept { return GroupId(static_cast<int64_t>(value)); }
     }
 }
 

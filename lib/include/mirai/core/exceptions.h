@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "export.h"
+
 namespace boost::beast::http
 {
     enum class status : unsigned;
@@ -25,10 +27,11 @@ namespace mpp
         erroneous_access = 400
     };
 
-    const char* get_description(MiraiStatus code); ///< 获取状态码对应的解释字符串
+    MPP_API const char* get_description(MiraiStatus code); ///< 获取状态码对应的解释字符串
 
+    MPP_SUPPRESS_EXPORT_WARNING
     /// Mirai API 调用异常类
-    class MiraiException : public std::runtime_error
+    class MPP_API MiraiException : public std::runtime_error
     {
     private:
         MiraiStatus code_;
@@ -40,13 +43,15 @@ namespace mpp
 
         MiraiStatus status_code() const noexcept { return code_; } ///< 获取状态码
     };
+    MPP_RESTORE_EXPORT_WARNING
 
-    void check_status_code(MiraiStatus code) noexcept(false); ///< 检查状态码，若不为成功状态则抛出异常
+    MPP_API void check_status_code(MiraiStatus code) noexcept(false); ///< 检查状态码，若不为成功状态则抛出异常
 
     using HttpStatus = boost::beast::http::status;
-
+    
+    MPP_SUPPRESS_EXPORT_WARNING
     /// HTTP 错误状态码异常类
-    class HttpStatusException : public std::runtime_error
+    class MPP_API HttpStatusException : public std::runtime_error
     {
     private:
         HttpStatus status_;
@@ -58,6 +63,7 @@ namespace mpp
 
         HttpStatus status_code() const noexcept { return status_; } ///< 获取状态码
     };
+    MPP_RESTORE_EXPORT_WARNING
 
-    void log_exception(); ///< 将当前捕获到的异常信息输出到 stderr
+    MPP_API void log_exception(); ///< 将当前捕获到的异常信息输出到 stderr
 }

@@ -4,11 +4,12 @@
 #include <clu/type_traits.h>
 
 #include "event_base.h"
-#include "../detail/json.h"
+#include "../detail/json_fwd.h"
 
 namespace mpp
 {
-    class Event final
+    MPP_SUPPRESS_EXPORT_WARNING
+    class MPP_API Event final
     {
     private:
         struct EventModel // NOLINT(cppcoreguidelines-special-member-functions)
@@ -93,4 +94,5 @@ namespace mpp
 
         static Event from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

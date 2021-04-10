@@ -1,5 +1,8 @@
 #include "mirai/message/segment_types.h"
 
+#include "mirai/message/forwarded_message.h"
+#include "../detail/json.h"
+
 namespace mpp
 {
     void At::format_to(fmt::format_context& ctx) const
@@ -23,6 +26,8 @@ namespace mpp
             .display = std::string(json["display"])
         };
     }
+
+    AtAll AtAll::from_json(detail::JsonElem) { return {}; }
 
     bool Face::operator==(const Face& other) const noexcept
     {
@@ -60,6 +65,8 @@ namespace mpp
         obj.add_entry("type", "Plain");
         obj.add_entry("text", text);
     }
+
+    Plain Plain::from_json(const detail::JsonElem json) { return { std::string(json["text"]) }; }
 
     bool Image::operator==(const Image& other) const noexcept
     {
@@ -170,12 +177,16 @@ namespace mpp
         obj.add_entry("xml", xml);
     }
 
+    Xml Xml::from_json(const detail::JsonElem json) { return { std::string(json["xml"]) }; }
+
     void Json::format_as_json(fmt::format_context& ctx) const
     {
         detail::JsonObjScope obj(ctx);
         obj.add_entry("type", "Json");
         obj.add_entry("json", json);
     }
+
+    Json Json::from_json(const detail::JsonElem json) { return { std::string(json["json"]) }; }
 
     void App::format_as_json(fmt::format_context& ctx) const
     {
@@ -184,10 +195,37 @@ namespace mpp
         obj.add_entry("content", content);
     }
 
+    App App::from_json(const detail::JsonElem json) { return { std::string(json["content"]) }; }
+
     void Poke::format_as_json(fmt::format_context& ctx) const
     {
         detail::JsonObjScope obj(ctx);
         obj.add_entry("type", "Poke");
         obj.add_entry("name", name);
+    }
+
+    Poke Poke::from_json(const detail::JsonElem json) { return { std::string(json["name"]) }; }
+
+    void Forward::format_as_json(fmt::format_context& ctx) const
+    {
+        detail::JsonObjScope obj(ctx);
+        obj.add_entry("type", "Forward");
+        obj.add_entry("title", title);
+        obj.add_entry("brief", brief);
+        obj.add_entry("source", source);
+        obj.add_entry("summary", summary);
+        obj.add_entry("nodeList", messages);
+    }
+
+    Forward Forward::from_json(const detail::JsonElem json)
+    {
+        return
+        {
+            .title = std::string(json["title"]),
+            .brief = std::string(json["brief"]),
+            .source = std::string(json["source"]),
+            .summary = std::string(json["summary"]),
+            .messages = detail::from_json<std::vector<ForwardedMessage>>(json["nodeList"])
+        };
     }
 }

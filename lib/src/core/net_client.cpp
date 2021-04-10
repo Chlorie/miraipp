@@ -12,8 +12,8 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/websocket.hpp>
+#include <clu/outcome.h>
 #include <fmt/core.h>
-
 #include <unifex/just.hpp>
 
 #include "mirai/core/exceptions.h"

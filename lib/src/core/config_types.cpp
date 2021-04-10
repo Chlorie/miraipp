@@ -1,5 +1,7 @@
 #include "mirai/core/config_types.h"
 
+#include "../detail/json.h"
+
 namespace mpp
 {
     SessionConfig SessionConfig::from_json(const detail::JsonElem json)

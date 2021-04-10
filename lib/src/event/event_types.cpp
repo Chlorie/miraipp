@@ -3,6 +3,7 @@
 #include <clu/hash.h>
 
 #include "mirai/core/bot.h"
+#include "../detail/json.h"
 
 namespace mpp
 {

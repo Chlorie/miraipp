@@ -3,15 +3,17 @@
 #include <string>
 
 #include "common.h"
-#include "../detail/json.h"
+#include "export.h"
+#include "../detail/json_fwd.h"
 
 namespace mpp
 {
     enum class Permission : uint8_t { member, admin, owner };
 
-    Permission permission_from_string(std::string_view str);
+    MPP_API Permission permission_from_string(std::string_view str);
 
-    struct Friend final
+    MPP_SUPPRESS_EXPORT_WARNING
+    struct MPP_API Friend final
     {
         UserId id;
         std::string name;
@@ -20,22 +22,23 @@ namespace mpp
         static Friend from_json(detail::JsonElem json);
     };
 
-    struct Group final
+    struct MPP_API Group final
     {
         GroupId id;
         std::string name;
-        Permission permission;
+        Permission permission{};
 
         static Group from_json(detail::JsonElem json);
     };
 
-    struct Member final
+    struct MPP_API Member final
     {
         Group group;
         UserId id;
         std::string name;
-        Permission permission;
+        Permission permission{};
 
         static Member from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

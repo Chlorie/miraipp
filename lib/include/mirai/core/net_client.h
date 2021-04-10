@@ -3,8 +3,9 @@
 #include <memory>
 #include <string_view>
 #include <chrono>
-#include <clu/coroutine/cancellable_task.h>
 #include <unifex/task.hpp>
+
+#include "export.h"
 
 namespace boost::asio
 {
@@ -18,7 +19,8 @@ namespace mpp::net
 
     class WebsocketSession;
 
-    class Client final
+    MPP_SUPPRESS_EXPORT_WARNING
+    class MPP_API Client final
     {
     private:
         class Impl;
@@ -53,7 +55,7 @@ namespace mpp::net
         Impl* pimpl_ptr() const { return impl_.get(); }
     };
 
-    class WebsocketSession final
+    class MPP_API WebsocketSession final
     {
     private:
         class Impl;
@@ -74,4 +76,5 @@ namespace mpp::net
 
         Impl* pimpl_ptr() const { return impl_.get(); }
     };
+    MPP_RESTORE_EXPORT_WARNING
 }

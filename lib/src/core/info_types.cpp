@@ -3,6 +3,8 @@
 #include <stdexcept>
 #include <clu/hash.h>
 
+#include "../detail/json.h"
+
 namespace mpp
 {
     Permission permission_from_string(const std::string_view str)
@@ -18,7 +20,7 @@ namespace mpp
         }
         // @formatter:on
     }
-
+    
     Friend Friend::from_json(const detail::JsonElem json)
     {
         return

@@ -2,14 +2,23 @@
 
 #include <clu/hash.h>
 
+#include "mirai/message/forwarded_message.h"
+#include "../detail/json.h"
+
 namespace mpp
 {
+    bool Segment::compare_with_sv(const std::string_view sv) const noexcept
+    {
+        if (const auto* ptr = get_if<Plain>())
+            return ptr->text == sv;
+        return false;
+    }
+
     Segment Segment::from_json(const detail::JsonElem json)
     {
         using namespace clu::literals;
-        const std::string_view type = json["type"];
         // @formatter:off
-        switch (clu::fnv1a(type))
+        switch (const std::string_view type = json["type"]; clu::fnv1a(type))
         {
             case "At"_fnv1a:         return At::from_json(json);
             case "AtAll"_fnv1a:      return AtAll::from_json(json);
@@ -22,6 +31,7 @@ namespace mpp
             case "Json"_fnv1a:       return Json::from_json(json);
             case "App"_fnv1a:        return App::from_json(json);
             case "Poke"_fnv1a:       return Poke::from_json(json);
+            case "Forward"_fnv1a:    return Forward::from_json(json);
             default: throw std::runtime_error("未知的消息段类型");
         }
         // @formatter:on

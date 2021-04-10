@@ -1,4 +1,5 @@
 add_library(miraipp)
+add_library(miraipp::miraipp ALIAS miraipp)
 
 set(LIB_NAME miraipp)
 
@@ -14,20 +15,26 @@ function (add_sources VAR)
 endfunction ()
 
 add_headers(HEADERS
+    "core.h"
+    "event.h"
+    "message.h"
+    "mirai.h"
+
     "core/bot.h"
     "core/common.h"
     "core/config_types.h"
     "core/exceptions.h"
+    "core/export.h"
     "core/format.h"
     "core/info_types.h"
     "core/net_client.h"
-    "detail/json.h"
-    "detail/multipart_builder.h"
+    "detail/json_fwd.h"
     "event/event.h"
     "event/event_base.h"
     "event/event_bases.h"
     "event/event_types.h"
     "event/event_types_fwd.h"
+    "message/forwarded_message.h"
     "message/message.h"
     "message/segment.h"
     "message/segment_types.h"
@@ -43,10 +50,13 @@ add_sources(SOURCES
     "core/exceptions.cpp"
     "core/info_types.cpp"
     "core/net_client.cpp"
+    "detail/json.h"
+    "detail/multipart_builder.h"
     "detail/multipart_builder.cpp"
     "event/event.cpp"
     "event/event_bases.cpp"
     "event/event_types.cpp"
+    "message/forwarded_message.cpp"
     "message/message.cpp"
     "message/segment.cpp"
     "message/segment_types.cpp"
@@ -63,6 +73,14 @@ find_package(unifex CONFIG REQUIRED)
 
 target_sources(miraipp PRIVATE ${HEADERS} ${SOURCES})
 target_set_options(miraipp)
+
+if (BUILD_SHARED_LIBS)
+    target_compile_definitions(miraipp
+        PRIVATE MPP_EXPORT_SHARED
+        PUBLIC MPP_BUILD_SHARED
+    )
+endif ()
+
 target_include_directories(miraipp
 PRIVATE
     ${Boost_INCLUDE_DIRS} # Boost only used in implementation
@@ -73,10 +91,10 @@ PUBLIC
 target_link_libraries(miraipp
 PRIVATE
     ${Boost_LIBRARIES}
+    simdjson::simdjson
 PUBLIC
     clu
     fmt::fmt
-    simdjson::simdjson
     unifex::unifex
 )
 

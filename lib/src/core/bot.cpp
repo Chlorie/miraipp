@@ -9,8 +9,10 @@
 
 #include "mirai/core/exceptions.h"
 #include "mirai/message/message.h"
-#include "mirai/detail/multipart_builder.h"
 #include "mirai/event/event_types.h"
+
+#include "../detail/json.h"
+#include "../detail/multipart_builder.h"
 
 namespace mpp
 {

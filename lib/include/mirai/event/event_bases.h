@@ -6,13 +6,16 @@
 #include "event.h"
 #include "../core/info_types.h"
 #include "../message/sent_message.h"
+#include "../message/forwarded_message.h"
+#include "../message/segment_types.h"
 
 namespace mpp
 {
     namespace ex = unifex;
 
+    MPP_SUPPRESS_EXPORT_WARNING
     /// 消息事件基类
-    struct MessageEventBase : EventBase
+    struct MPP_API MessageEventBase : EventBase
     {
         SentMessage msg; ///< 收到的消息
 
@@ -23,7 +26,7 @@ namespace mpp
     };
 
     /// 群事件基类
-    struct GroupEventBase : EventBase
+    struct MPP_API GroupEventBase : EventBase
     {
         Group group; ///< 事件来源的群
 
@@ -39,7 +42,7 @@ namespace mpp
     };
 
     /// 包含操作者的事件基类
-    struct ExecutorEventBase : EventBase
+    struct MPP_API ExecutorEventBase : EventBase
     {
         Member executor; ///< 事件的操作者
 
@@ -49,7 +52,7 @@ namespace mpp
     };
 
     /// 包含操作者的群事件基类
-    struct GroupExecutorEventBase : GroupEventBase
+    struct MPP_API GroupExecutorEventBase : GroupEventBase
     {
         std::optional<Member> executor; ///< 事件的操作者
 
@@ -59,7 +62,7 @@ namespace mpp
     };
 
     /// 群成员事件基类
-    struct MemberEventBase : EventBase
+    struct MPP_API MemberEventBase : EventBase
     {
         Member member; ///< 与当前事件关联的群成员
 
@@ -85,7 +88,7 @@ namespace mpp
     };
     
     /// 包含操作者的群成员事件基类
-    struct MemberExecutorEventBase : MemberEventBase
+    struct MPP_API MemberExecutorEventBase : MemberEventBase
     {
         std::optional<Member> executor; ///< 事件的操作者
 
@@ -93,4 +96,5 @@ namespace mpp
 
         static MemberExecutorEventBase from_json(detail::JsonElem json);
     };
+    MPP_RESTORE_EXPORT_WARNING
 }
