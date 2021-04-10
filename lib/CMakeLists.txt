@@ -121,7 +121,8 @@ if (MIRAI_INSTALL)
         INSTALL_DESTINATION lib/cmake/${LIB_NAME}
     )
 
-    install(EXPORT ${LIB_NAME}Targets DESTINATION lib/cmake/${LIB_NAME})
+    export(TARGETS ${LIB_NAME} NAMESPACE ${LIB_NAME}:: FILE ${LIB_NAME}Config.cmake)
+    install(EXPORT ${LIB_NAME}Targets NAMESPACE ${LIB_NAME}:: DESTINATION lib/cmake/${LIB_NAME})
     install(FILES "${PROJECT_BINARY_DIR}/${LIB_NAME}ConfigVersion.cmake"
                   "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake"
             DESTINATION lib/cmake/${LIB_NAME})
