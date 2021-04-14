@@ -14,6 +14,7 @@ namespace mpp
 
         Friend sender; ///< 消息的发送者
 
+        MessageId send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
         /**
          * \brief 向消息发送者发送消息
          * \param message 消息内容
@@ -22,6 +23,7 @@ namespace mpp
          */
         ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
+        MessageId quote_reply(const Message& message) const { return send_message(message, msg.source.id); }
         /**
          * \brief 引用回复本消息
          * \param message 消息内容
@@ -38,28 +40,32 @@ namespace mpp
         static constexpr EventType type = EventType::group_message;
 
         Member sender; ///< 消息的发送者
-
+        
         At at_sender() const { return At{ sender.id }; } ///< 获取对象为消息发送者的 at 消息段
 
+        MessageId send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
         /**
-         * \brief 异步地向消息发送者发送消息
+         * \brief 向消息发送者发送消息
          * \param message 消息内容
          * \param quote （可选）要引用回复的消息 id
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
-
+        
+        MessageId quote_reply(const Message& message) const { return send_message(message, msg.source.id); }
         /**
-         * \brief 异步地引用回复本消息
+         * \brief 引用回复本消息
          * \param message 消息内容
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg.source.id); }
 
-        ex::task<void> recall_async() const; ///< 异步地撤回该消息
+        void recall() const;
+        ex::task<void> recall_async() const; ///< 撤回该消息
 
+        void mute_sender(std::chrono::seconds duration) const;
         /**
-         * \brief 异步地禁言该消息发送者
+         * \brief 禁言该消息发送者
          * \param duration 禁言时长
          */
         ex::task<void> mute_sender_async(std::chrono::seconds duration) const;
@@ -73,19 +79,21 @@ namespace mpp
         static constexpr EventType type = EventType::temp_message;
 
         Member sender; ///< 消息的发送者
-
+        
+        MessageId send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
         /**
-         * \brief 异步地向消息发送者发送消息
+         * \brief 向消息发送者发送消息
          * \param message 消息内容
          * \param quote （可选）要引用回复的消息 id
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
-
+        
+        MessageId quote_reply(const Message& message) const { return send_message(message, msg.source.id); }
         /**
-         * \brief 异步地引用回复本消息
+         * \brief 引用回复本消息
          * \param message 消息内容
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg.source.id); }
 
@@ -179,11 +187,12 @@ namespace mpp
         int32_t time{}; ///< 被撤回消息发送的时间
 
         At at_sender() const { return At{ sender_id }; } ///< 获取对象为被撤回消息的发送者的 at 消息段
-
+        
+        MessageId quote_reply(const Message& message) const { return send_message(message, msg_id); }
         /**
-         * \brief 异步地引用回复被撤回的消息
+         * \brief 引用回复被撤回的消息
          * \param message 消息内容
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> quote_reply_async(const Message& message) const { return send_message_async(message, msg_id); }
 
@@ -198,11 +207,12 @@ namespace mpp
         UserId sender_id; ///< 被撤回消息的发送者 QQ 号
         MessageId msg_id; ///< 被撤回消息的 id
         int32_t time{}; ///< 被撤回消息发送的时间
-
+        
+        MessageId quote_reply(const Message& message) const;
         /**
-         * \brief 异步地引用回复被撤回的消息
+         * \brief 引用回复被撤回的消息
          * \param message 消息内容
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> quote_reply_async(const Message& message) const;
 
@@ -334,6 +344,7 @@ namespace mpp
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
 
+        void respond(ResponseType response, std::string_view reason) const;
         ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static NewFriendRequestEvent from_json(detail::JsonElem json);
@@ -358,7 +369,8 @@ namespace mpp
         std::string group_name; ///< 群名称
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
-
+        
+        void respond(ResponseType response, std::string_view reason) const;
         ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static MemberJoinRequestEvent from_json(detail::JsonElem json);
@@ -379,7 +391,8 @@ namespace mpp
         std::string group_name; ///< 群名称
         std::string name; ///< 申请人昵称
         std::string message; ///< 申请附言
-
+        
+        void respond(ResponseType response, std::string_view reason) const;
         ex::task<void> respond_async(ResponseType response, std::string_view reason) const;
 
         static BotInvitedJoinGroupRequestEvent from_json(detail::JsonElem json);

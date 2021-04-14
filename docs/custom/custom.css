@@ -1,5 +1,6 @@
-/* Fix for read the docs theme */
-
+.strike {
+    text-decoration: line-through;
+}
 .rst-content dl:not(.docutils) dt {
     display: table-cell !important;
 }

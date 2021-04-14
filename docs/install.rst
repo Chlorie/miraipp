@@ -36,7 +36,7 @@ VS 以及 VSC 都直接适配 vcpkg，若前面已经安装好 vcpkg 并且环�
 
 如果你想在已有的 CMake 项目中引入 Mirai++ 的话，只需要在项目根目录（包含 ``CMakeLists.txt`` 文件的最外层目录）中创建两个新的文件：``vcpkg.json`` 以及 ``vcpkg-configuration.json`` 列出对 Mirai++ 的依赖。
 
-.. code-block:: json5
+.. code-block:: js
 
    // vcpkg.json
    {

@@ -98,6 +98,49 @@ namespace mpp::net
             }
         };
 
+        class ScheduleSender final
+        {
+        public:
+            template <
+                template <typename...> typename Var,
+                template <typename...> typename Tup>
+            using value_types = Var<Tup<>>;
+
+            template <template <typename...> typename Var>
+            using error_types = Var<std::exception_ptr>;
+
+            static constexpr bool sends_done = false;
+
+            template <typename Recv>
+            class Operation final
+            {
+            private:
+                asio::io_context& ctx_;
+                Recv recv_;
+
+                Recv&& receiver() { return static_cast<Recv&&>(recv_); }
+
+            public:
+                Operation(asio::io_context& ctx, Recv&& recv):
+                    ctx_(ctx), recv_(static_cast<Recv&&>(recv)) {}
+
+                void start() & noexcept
+                {
+                    try { asio::post(ctx_, [this] { ex::set_done(receiver()); }); }
+                    catch (...) { ex::set_error(receiver(), std::current_exception()); }
+                }
+            };
+
+        private:
+            asio::io_context& ctx_;
+
+        public:
+            explicit ScheduleSender(asio::io_context& ctx): ctx_(ctx) {}
+
+            template <ex::receiver Recv>
+            Operation<Recv> connect(Recv&& recv) noexcept { return { ctx_, static_cast<Recv&&>(recv) }; }
+        };
+
         class WaitUntilSender final
         {
         public:
@@ -164,6 +207,68 @@ namespace mpp::net
         public:
             WaitUntilSender(asio::io_context& ctx, const TimePoint tp):
                 strand_(make_strand(ctx)), timer_(ctx, tp) {}
+
+            template <ex::receiver Recv>
+            Operation<Recv> connect(Recv&& recv) noexcept { return { *this, static_cast<Recv&&>(recv) }; }
+        };
+
+        class WebSocketReadSender final
+        {
+        public:
+            template <
+                template <typename...> typename Var,
+                template <typename...> typename Tup>
+            using value_types = Var<Tup<std::string>>;
+
+            template <template <typename...> typename Var>
+            using error_types = Var<std::exception_ptr>;
+
+            static constexpr bool sends_done = true;
+
+            template <typename Recv>
+            class Operation final
+            {
+            private:
+                WebSocketReadSender& send_;
+                Recv recv_;
+
+                Recv&& receiver() { return static_cast<Recv&&>(recv_); }
+
+            public:
+                Operation(WebSocketReadSender& send, Recv&& recv):
+                    send_(send), recv_(static_cast<Recv&&>(recv)) {}
+
+                void start() & noexcept
+                {
+                    try
+                    {
+                        send_.stream_.async_read(send_.buffer_, [this](const error_code& ec, size_t)
+                        {
+                            if (ec == ws::error::closed || ec == sys::errc::operation_canceled)
+                                ex::set_done(receiver());
+                            else if (ec)
+                                ex::set_error(receiver(), std::make_exception_ptr(std::system_error(ec)));
+                            else
+                            {
+                                beast::flat_buffer& buffer = send_.buffer_;
+                                const size_t size = buffer.size();
+                                std::string result(static_cast<const char*>(buffer.data().data()), size);
+                                buffer.consume(size);
+                                ex::set_value(receiver(), std::move(result));
+                            }
+                        });
+                    }
+                    catch (...) { ex::set_error(receiver(), std::current_exception()); }
+                }
+            };
+
+        private:
+            ws_stream& stream_;
+            beast::flat_buffer& buffer_;
+
+        public:
+            WebSocketReadSender(ws_stream& stream, beast::flat_buffer& buffer):
+                stream_(stream), buffer_(buffer) {}
 
             template <ex::receiver Recv>
             Operation<Recv> connect(Recv&& recv) noexcept { return { *this, static_cast<Recv&&>(recv) }; }
@@ -269,6 +374,7 @@ namespace mpp::net
             return req;
         }
 
+        auto schedule() { return ScheduleSender(ctx_); }
         auto wait_async(const TimePoint tp) { return WaitUntilSender(ctx_, tp); }
 
         void connect_websocket(ws_stream& stream, const std::string_view target)
@@ -311,18 +417,7 @@ namespace mpp::net
             return std::move(result);
         }
 
-        ex::task<std::string> read_async()
-        {
-            const auto impl = [&]() -> asio::awaitable<std::string>
-            {
-                co_await stream_.async_read(buffer_, asio::use_awaitable);
-                const size_t size = buffer_.size();
-                std::string result(static_cast<const char*>(buffer_.data().data()), size);
-                buffer_.consume(size);
-                co_return std::move(result);
-            };
-            co_return co_await AsioAwaiter(ctx_, impl());
-        }
+        WebSocketReadSender read_async() { return { stream_, buffer_ }; }
 
         void close() { stream_.close(ws::normal); }
 
@@ -384,6 +479,8 @@ namespace mpp::net
             impl_->generate_http_post_request(target, json_content_type, std::move(body)));
     }
 
+    ex::task<void> Client::schedule() { co_await impl_->schedule(); }
+
     ex::task<void> Client::wait_async(const TimePoint tp) { co_await impl_->wait_async(tp); }
 
     WebsocketSession Client::new_websocket_session() { return WebsocketSession(io_context()); }
@@ -406,7 +503,7 @@ namespace mpp::net
     WebsocketSession& WebsocketSession::operator=(WebsocketSession&&) noexcept = default;
 
     std::string WebsocketSession::read() { return impl_->read(); }
-    ex::task<std::string> WebsocketSession::read_async() { return impl_->read_async(); }
+    ex::task<std::string> WebsocketSession::read_async() { co_return co_await impl_->read_async(); }
     void WebsocketSession::close() { return impl_->close(); }
     ex::task<void> WebsocketSession::close_async() { return impl_->close_async(); }
     // ReSharper restore CppMemberFunctionMayBeConst

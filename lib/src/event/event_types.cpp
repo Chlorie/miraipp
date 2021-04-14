@@ -16,6 +16,12 @@ namespace mpp
         MessageId get_mid(const detail::JsonRes json) { return MessageId(detail::from_json<int32_t>(json)); }
     }
 
+    MessageId FriendMessageEvent::send_message(
+        const Message& message, const clu::optional_param<MessageId> quote) const
+    {
+        return bot().send_message(sender.id, message, quote);
+    }
+
     ex::task<MessageId> FriendMessageEvent::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
@@ -31,15 +37,24 @@ namespace mpp
         };
     }
 
+    MessageId GroupMessageEvent::send_message(
+        const Message& message, const clu::optional_param<MessageId> quote) const
+    {
+        return bot().send_message(sender.group.id, message, quote);
+    }
+
     ex::task<MessageId> GroupMessageEvent::send_message_async(
         const Message& message, const clu::optional_param<MessageId> quote) const
     {
         return bot().send_message_async(sender.group.id, message, quote);
     }
 
-    ex::task<void> GroupMessageEvent::recall_async() const
+    void GroupMessageEvent::recall() const { bot().recall(msg.source.id); }
+    ex::task<void> GroupMessageEvent::recall_async() const { return bot().recall_async(msg.source.id); }
+
+    void GroupMessageEvent::mute_sender(const std::chrono::seconds duration) const
     {
-        return bot().recall_async(msg.source.id);
+        bot().mute(sender.group.id, sender.id, duration);
     }
 
     ex::task<void> GroupMessageEvent::mute_sender_async(const std::chrono::seconds duration) const
@@ -54,6 +69,12 @@ namespace mpp
             MessageEventBase::from_json(json),
             Member::from_json(json["sender"])
         };
+    }
+
+    MessageId TempMessageEvent::send_message(
+        const Message& message, const clu::optional_param<MessageId> quote) const
+    {
+        return bot().send_message(TempId{ sender.id, sender.group.id }, message, quote);
     }
 
     ex::task<MessageId> TempMessageEvent::send_message_async(
@@ -152,6 +173,8 @@ namespace mpp
             detail::from_json<int32_t>(json["time"])
         };
     }
+
+    MessageId FriendRecallEvent::quote_reply(const Message& message) const { return bot().send_message(sender_id, message, msg_id); }
 
     ex::task<MessageId> FriendRecallEvent::quote_reply_async(const Message& message) const
     {
@@ -272,6 +295,12 @@ namespace mpp
         return { MemberExecutorEventBase::from_json(json) };
     }
 
+    void NewFriendRequestEvent::respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        bot().respond(*this, response, reason);
+    }
+
     ex::task<void> NewFriendRequestEvent::respond_async(
         const ResponseType response, const std::string_view reason) const
     {
@@ -288,6 +317,12 @@ namespace mpp
             .name = detail::from_json<std::string>(json["nick"]),
             .message = detail::from_json<std::string>(json["message"])
         };
+    }
+
+    void MemberJoinRequestEvent::respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        bot().respond(*this, response, reason);
     }
 
     ex::task<void> MemberJoinRequestEvent::respond_async(
@@ -307,6 +342,12 @@ namespace mpp
             .name = detail::from_json<std::string>(json["nick"]),
             .message = detail::from_json<std::string>(json["message"])
         };
+    }
+
+    void BotInvitedJoinGroupRequestEvent::respond(
+        const ResponseType response, const std::string_view reason) const
+    {
+        bot().respond(*this, response, reason);
     }
 
     ex::task<void> BotInvitedJoinGroupRequestEvent::respond_async(

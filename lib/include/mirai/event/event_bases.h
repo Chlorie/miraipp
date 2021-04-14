@@ -30,11 +30,12 @@ namespace mpp
     {
         Group group; ///< 事件来源的群
 
+        MessageId send_message(const Message& message, clu::optional_param<MessageId> quote = {}) const;
         /**
-         * \brief 异步地向事件来源群发送消息
+         * \brief 向事件来源群发送消息
          * \param message 消息内容
          * \param quote （可选）要引用回复的消息 id
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
@@ -69,20 +70,22 @@ namespace mpp
         At at_member() const { return At{ member.id }; } ///< 获取对象为与当前事件关联的群成员的 at 消息段
 
         /**
-         * \brief 异步地向事件来源群发送消息
+         * \brief 向事件来源群发送消息
          * \param message 消息内容
          * \param quote （可选）要引用回复的消息 id
-         * \return （异步）已发送消息的 id，用于撤回和引用回复
+         * \return 已发送消息的 id，用于撤回和引用回复
          */
         ex::task<MessageId> send_message_async(const Message& message, clu::optional_param<MessageId> quote = {}) const;
 
+        void mute_member(std::chrono::seconds duration) const;
         /**
-         * \brief 异步地禁言与当前事件关联的群成员
+         * \brief 禁言与当前事件关联的群成员
          * \param duration 禁言时长
          */
         ex::task<void> mute_member_async(std::chrono::seconds duration) const;
 
-        ex::task<void> unmute_member_async() const; ///< 异步地解禁与当前事件关联的群成员
+        void unmute_member() const;
+        ex::task<void> unmute_member_async() const; ///< 解禁与当前事件关联的群成员
 
         static MemberEventBase from_json(detail::JsonElem json);
     };

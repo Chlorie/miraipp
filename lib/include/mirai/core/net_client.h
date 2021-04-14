@@ -15,13 +15,34 @@ namespace boost::asio
 namespace mpp::net
 {
     namespace ex = unifex;
-    using TimePoint = std::chrono::steady_clock::time_point;
+    using Clock = std::chrono::steady_clock;
+    using TimePoint = Clock::time_point;
+    using Duration = Clock::duration;
 
     class WebsocketSession;
 
     MPP_SUPPRESS_EXPORT_WARNING
     class MPP_API Client final
     {
+    public:
+        class MPP_API Scheduler final
+        {
+        public:
+            using time_point = TimePoint;
+
+        private:
+            Client& client_;
+
+        public:
+            explicit Scheduler(Client& client): client_(client) {}
+            static TimePoint now() noexcept { return Clock::now(); }
+            ex::task<void> schedule() const { return client_.schedule(); }
+            ex::task<void> schedule_at(const TimePoint tp) const { return client_.wait_async(tp); }
+            ex::task<void> schedule_after(const Duration dur) const { return client_.wait_async(now() + dur); }
+
+            [[nodiscard]] bool operator==(const Scheduler& other) const noexcept { return &client_ == &other.client_; }
+        };
+
     private:
         class Impl;
         std::unique_ptr<Impl> impl_;
@@ -46,6 +67,7 @@ namespace mpp::net
         std::string http_post_json(std::string_view target, std::string body);
         ex::task<std::string> http_post_json_async(std::string_view target, std::string body);
 
+        ex::task<void> schedule();
         ex::task<void> wait_async(TimePoint tp);
 
         WebsocketSession new_websocket_session();

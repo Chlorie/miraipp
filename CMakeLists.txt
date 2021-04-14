@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.13)
 
-project(miraipp LANGUAGES CXX VERSION 0.1.3)
+project(miraipp LANGUAGES CXX VERSION 0.2.0)
 
 set(CMAKE_SCRIPTS "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SCRIPTS})
@@ -69,6 +69,13 @@ function (target_set_options TGT)
             # TODO: gcc trunk currently confuses itself in coroutine code, remove this later when gcc behaves well
             -Wno-unused-value)
     endif ()
+endfunction ()
+
+function (target_set_output_dir TGT)
+    set_target_properties(${TGT} PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/out")
 endfunction ()
 
 add_subdirectory(lib)

@@ -1,17 +1,17 @@
 add_library(miraipp)
 add_library(miraipp::miraipp ALIAS miraipp)
 
-set(LIB_NAME miraipp)
+target_set_output_dir(miraipp)
 
-function (add_headers VAR)
+function (add_headers TGT)
     set(headers ${ARGN})
     list(TRANSFORM headers PREPEND "include/mirai/")
-    set(${VAR} ${headers} PARENT_SCOPE)
+    set(${TGT} ${headers} PARENT_SCOPE)
 endfunction ()
-function (add_sources VAR)
+function (add_sources TGT)
     set(sources ${ARGN})
     list(TRANSFORM sources PREPEND "src/")
-    set(${VAR} ${sources} PARENT_SCOPE)
+    set(${TGT} ${sources} PARENT_SCOPE)
 endfunction ()
 
 add_headers(HEADERS
@@ -77,8 +77,7 @@ target_set_options(miraipp)
 if (BUILD_SHARED_LIBS)
     target_compile_definitions(miraipp
         PRIVATE MPP_EXPORT_SHARED
-        PUBLIC MPP_BUILD_SHARED
-    )
+        PUBLIC MPP_BUILD_SHARED)
 endif ()
 
 target_include_directories(miraipp
@@ -101,13 +100,13 @@ PUBLIC
 if (MIRAI_INSTALL)
     include(CMakePackageConfigHelpers)
     write_basic_package_version_file(
-        "${PROJECT_BINARY_DIR}/${LIB_NAME}ConfigVersion.cmake"
+        "${PROJECT_BINARY_DIR}/miraippConfigVersion.cmake"
         VERSION ${PACKAGE_VERSION}
         COMPATIBILITY SameMajorVersion
     )
 
-    install(TARGETS ${LIB_NAME}
-        EXPORT ${LIB_NAME}Targets
+    install(TARGETS miraipp
+        EXPORT miraippTargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
@@ -116,15 +115,15 @@ if (MIRAI_INSTALL)
 
     include(CMakePackageConfigHelpers)
     configure_package_config_file(
-        "${PROJECT_SOURCE_DIR}/cmake/${LIB_NAME}Config.cmake.in"
-        "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake"
-        INSTALL_DESTINATION lib/cmake/${LIB_NAME}
+        "${PROJECT_SOURCE_DIR}/cmake/miraippConfig.cmake.in"
+        "${PROJECT_BINARY_DIR}/miraippConfig.cmake"
+        INSTALL_DESTINATION lib/cmake/miraipp
     )
 
-    export(TARGETS ${LIB_NAME} NAMESPACE ${LIB_NAME}:: FILE ${LIB_NAME}Config.cmake)
-    install(EXPORT ${LIB_NAME}Targets NAMESPACE ${LIB_NAME}:: DESTINATION lib/cmake/${LIB_NAME})
-    install(FILES "${PROJECT_BINARY_DIR}/${LIB_NAME}ConfigVersion.cmake"
-                  "${PROJECT_BINARY_DIR}/${LIB_NAME}Config.cmake"
-            DESTINATION lib/cmake/${LIB_NAME})
+    export(TARGETS miraipp NAMESPACE miraipp:: FILE miraippConfig.cmake)
+    install(EXPORT miraippTargets NAMESPACE miraipp:: DESTINATION lib/cmake/miraipp)
+    install(FILES "${PROJECT_BINARY_DIR}/miraippConfigVersion.cmake"
+                  "${PROJECT_BINARY_DIR}/miraippConfig.cmake"
+            DESTINATION lib/cmake/miraipp)
     install(DIRECTORY ${PROJECT_SOURCE_DIR}/lib/include/ DESTINATION include)
 endif ()

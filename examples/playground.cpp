@@ -1,5 +1,4 @@
 #include <mirai/mirai.h>
-#include <clu/vector_utils.h>
 
 using namespace std::literals;
 using namespace mpp::literals;
@@ -7,20 +6,13 @@ using unifex::task;
 
 task<bool> test(const mpp::Event& ev)
 {
-    if (const auto* gme = ev.get_if<mpp::GroupMessageEvent>())
+    if (const auto* ptr = ev.get_if<mpp::FriendMessageEvent>();
+        ptr->content() == "stop")
     {
-        const auto& msg = gme->content();
-        if (msg.size() == 1 && msg[0].type() == mpp::SegmentType::forward)
-        {
-            const auto& [title, brief, source, summary, messages] = msg[0].get<mpp::Forward>();
-            std::string sent;
-            for (const auto& [sender, time, sender_name, content] : messages)
-                sent += fmt::format("time: {}, sender: {} ({}), content: {}\n", time, sender_name, sender.id, content);
-            co_await gme->quote_reply_async(std::move(sent));
-            co_return true;
-        }
+        co_await ptr->quote_reply_async("ok");
+        co_return false;
     }
-    co_return false;
+    co_return true;
 }
 
 int main() // NOLINT

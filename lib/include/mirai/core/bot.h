@@ -8,6 +8,7 @@
 #include "common.h"
 #include "info_types.h"
 #include "config_types.h"
+#include "exceptions.h"
 #include "net_client.h"
 #include "../message/segment_types_fwd.h"
 #include "../event/event_types_fwd.h"
@@ -44,8 +45,7 @@ namespace mpp
          * \param host 要连接到端点的主机，默认为 127.0.0.1
          * \param port 要连接到端点的端口，默认为 8080
          */
-        explicit Bot(const std::string_view host = "127.0.0.1", const std::string_view port = "8080"):
-            net_client_(host, port) {}
+        explicit Bot(const std::string_view host = "127.0.0.1", const std::string_view port = "8080"): net_client_(host, port) {}
         ~Bot() noexcept; ///< 销毁当前 bot 对象，释放未结束的会话并关闭所有连接
         /// \}
 
@@ -142,12 +142,12 @@ namespace mpp
         /// \defgroup BotEvent
         /// \{
         std::vector<Event> pop_events(size_t count);
-        std::vector<Event> pop_latest_events(size_t count);
-        std::vector<Event> peek_events(size_t count);
-        std::vector<Event> peek_latest_events(size_t count);
         ex::task<std::vector<Event>> pop_events_async(size_t count);
+        std::vector<Event> pop_latest_events(size_t count);
         ex::task<std::vector<Event>> pop_latest_events_async(size_t count);
+        std::vector<Event> peek_events(size_t count);
         ex::task<std::vector<Event>> peek_events_async(size_t count);
+        std::vector<Event> peek_latest_events(size_t count);
         /**
          * \brief 接收 bot 收到的消息和事件
          * \details \rst
@@ -159,22 +159,36 @@ namespace mpp
          */
         ex::task<std::vector<Event>> peek_latest_events_async(size_t count);
 
+        Event retrieve_message(MessageId id);
         ex::task<Event> retrieve_message_async(MessageId id);
+        size_t count_message();
         ex::task<size_t> count_message_async();
         /// \}
 
+        std::vector<Friend> list_friends();
         ex::task<std::vector<Friend>> list_friends_async();
+        std::vector<Group> list_groups();
         ex::task<std::vector<Group>> list_groups_async();
+        std::vector<Member> list_members(GroupId id);
         ex::task<std::vector<Member>> list_members_async(GroupId id);
 
+        void mute(GroupId group, UserId user, std::chrono::seconds duration);
         ex::task<void> mute_async(GroupId group, UserId user, std::chrono::seconds duration);
+        void unmute(GroupId group, UserId user);
         ex::task<void> unmute_async(GroupId group, UserId user);
+        void mute_all(GroupId group);
         ex::task<void> mute_all_async(GroupId group);
+        void unmute_all(GroupId group);
         ex::task<void> unmute_all_async(GroupId group);
 
+        void kick(GroupId group, UserId user, std::string_view reason);
         ex::task<void> kick_async(GroupId group, UserId user, std::string_view reason);
+        void quit(GroupId group);
         ex::task<void> quit_async(GroupId group);
 
+        void respond(const NewFriendRequestEvent& ev, NewFriendResponseType type, std::string_view reason);
+        void respond(const MemberJoinRequestEvent& ev, MemberJoinResponseType type, std::string_view reason);
+        void respond(const BotInvitedJoinGroupRequestEvent& ev, BotInvitedJoinGroupResponseType type, std::string_view reason);
         ex::task<void> respond_async(
             const NewFriendRequestEvent& ev, NewFriendResponseType type, std::string_view reason);
         ex::task<void> respond_async(
@@ -182,10 +196,14 @@ namespace mpp
         ex::task<void> respond_async(
             const BotInvitedJoinGroupRequestEvent& ev, BotInvitedJoinGroupResponseType type, std::string_view reason);
 
+        GroupConfig get_group_config(GroupId group);
         ex::task<GroupConfig> get_group_config_async(GroupId group);
+        void config_group(GroupId group, const GroupConfig& config);
         ex::task<void> config_group_async(GroupId group, const GroupConfig& config);
 
+        MemberInfo get_member_info(GroupId group, UserId user);
         ex::task<MemberInfo> get_member_info_async(GroupId group, UserId user);
+        void set_member_info(GroupId group, UserId user, const MemberInfo& info);
         ex::task<void> set_member_info_async(GroupId group, UserId user, const MemberInfo& info);
 
         /// \defgroup BotMonitor
@@ -193,22 +211,28 @@ namespace mpp
         /**
          * \brief 启动 Websocket 会话，监听所有种类的事件
          * \param callback 接收到消息时需要调用的函数
+         * \param exception_handler callback 抛出未处理的异常时调用的函数，默认为 log_exception
          * \remark \rst
          * 回调函数的函数原型须为 ``bool callback(const Event&)``，
-         * 当某次调用回调函数返回 ``true`` 时关闭 Websocket 会话。
+         * 当某次调用回调函数返回 ``false`` 时关闭 Websocket 会话。
+         * 异常处理函数原型须为 ``void exception_handler()``。
          * \endrst
          */
-        void monitor_events(clu::function_ref<bool(const Event&)> callback);
+        void monitor_events(clu::function_ref<bool(const Event&)> callback,
+            clu::function_ref<void()> exception_handler = log_exception);
 
         /**
          * \brief 异步地启动 Websocket 会话，监听所有种类的事件
          * \param callback 接收到消息时需要调用的函数
+         * \param exception_handler callback 抛出未处理的异常时调用的函数，默认为 log_exception
          * \remark \rst
          * 回调函数的函数原型须为 ``ex::task<bool> callback(const Event&)``，
-         * 当某次调用回调函数返回 ``true`` 时，在所有正在进行的回调函数全部执行完成后将会关闭 Websocket 会话。
+         * 当某次调用回调函数返回 ``false`` 时，WebSocket 会话会被关闭，所有正在进行的回调函数会被尝试取消。
+         * 异常处理函数原型须为 ``void exception_handler()``。
          * \endrst
          */
-        ex::task<void> monitor_events_async(clu::function_ref<ex::task<bool>(const Event&)> callback);
+        ex::task<void> monitor_events_async(clu::function_ref<ex::task<bool>(const Event&)> callback,
+            clu::function_ref<void()> exception_handler = log_exception);
         /// \}
 
         SessionConfig get_config();
@@ -216,7 +240,7 @@ namespace mpp
 
         void config(SessionConfig config);
         ex::task<void> config_async(SessionConfig config);
-
+        
         // Pattern matcher queue needs a major revamp
 
         // template <ConcreteEvent E, PatternFor<E>... Ps>
@@ -258,8 +282,8 @@ namespace mpp
         /// \}
 
         void run() { net_client_.run(); } ///< 阻塞当前线程执行 I/O，直到所有 I/O 处理完成，可从多个线程调用
-
         boost::asio::io_context& io_context() { return net_client_.io_context(); } ///< 返回 bot 内使用的 asio::io_context
+        auto get_scheduler() { return net::Client::Scheduler(net_client_); } ///< 获取一个可供调度任务的计时调度器（TimedScheduler）
     };
     MPP_RESTORE_EXPORT_WARNING
 

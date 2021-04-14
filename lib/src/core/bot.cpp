@@ -144,6 +144,109 @@ namespace mpp
                 if (config.enable_websocket) scope.add_entry("enableWebsocket", *config.enable_websocket);
             });
         }
+
+        std::string mute_body(const Bot* bot, const GroupId group, const UserId user, const std::chrono::seconds duration)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", group.id);
+                scope.add_entry("memberId", user.id);
+                scope.add_entry("time", duration.count());
+            });
+        }
+
+        std::string unmute_body(const Bot* bot, const GroupId group, const UserId user)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", group.id);
+                scope.add_entry("memberId", user.id);
+            });
+        }
+
+        std::string kick_body(const Bot* bot, const GroupId group, const UserId user, const std::string_view reason)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", group.id);
+                scope.add_entry("memberId", user.id);
+                scope.add_entry("msg", reason);
+            });
+        }
+
+        std::string respond_body(const Bot* bot,
+            const NewFriendRequestEvent& ev, const NewFriendResponseType type, const std::string_view reason)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("eventId", ev.id);
+                scope.add_entry("fromId", ev.from_id.id);
+                scope.add_entry("groupId", ev.group_id.id);
+                scope.add_entry("operate", static_cast<uint64_t>(type));
+                scope.add_entry("message", reason);
+            });
+        }
+
+        std::string respond_body(const Bot* bot,
+            const MemberJoinRequestEvent& ev, const MemberJoinResponseType type, const std::string_view reason)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("eventId", ev.id);
+                scope.add_entry("fromId", ev.from_id.id);
+                scope.add_entry("groupId", ev.group_id.id);
+                scope.add_entry("operate", static_cast<uint64_t>(type));
+                scope.add_entry("message", reason);
+            });
+        }
+
+        std::string respond_body(const Bot* bot,
+            const BotInvitedJoinGroupRequestEvent& ev, const BotInvitedJoinGroupResponseType type, const std::string_view reason)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("eventId", ev.id);
+                scope.add_entry("fromId", ev.from_id.id);
+                scope.add_entry("groupId", ev.group_id.id);
+                scope.add_entry("operate", static_cast<uint64_t>(type));
+                scope.add_entry("message", reason);
+            });
+        }
+
+        std::string config_group_body(const Bot* bot, const GroupId group, const GroupConfig& config)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", group.id);
+                scope.add_entry("config", config);
+            });
+        }
+
+        std::string set_member_info_body(const Bot* bot, const GroupId group, const UserId user, const MemberInfo& info)
+        {
+            return detail::perform_format([&](fmt::format_context& ctx)
+            {
+                detail::JsonObjScope scope(ctx);
+                scope.add_entry("sessionKey", bot->session_key());
+                scope.add_entry("target", group.id);
+                scope.add_entry("memberId", user.id);
+                scope.add_entry("info", info);
+            });
+        }
     }
 
     std::string Bot::check_auth_gen_body(const std::string_view auth_key) const
@@ -368,32 +471,18 @@ namespace mpp
         return parse_events(json["data"]);
     }
 
-    std::vector<Event> Bot::pop_latest_events(const size_t count)
-    {
-        const auto json = get_checked_response_json(net_client_.http_get(
-            fmt::format("/fetchLatestMessage?sessionKey={}&count={}", sess_key_, count)));
-        return parse_events(json["data"]);
-    }
-
-    std::vector<Event> Bot::peek_events(const size_t count)
-    {
-        const auto json = get_checked_response_json(net_client_.http_get(
-            fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
-        return parse_events(json["data"]);
-    }
-
-    std::vector<Event> Bot::peek_latest_events(const size_t count)
-    {
-        const auto json = get_checked_response_json(net_client_.http_get(
-            fmt::format("/peekLatestMessage?sessionKey={}&count={}", sess_key_, count)));
-        return parse_events(json["data"]);
-    }
-
     ex::task<std::vector<Event>> Bot::pop_events_async(const size_t count)
     {
         const auto json = get_checked_response_json(co_await net_client_.http_get_async(
             fmt::format("/fetchMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
+    }
+
+    std::vector<Event> Bot::pop_latest_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/fetchLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
     }
 
     ex::task<std::vector<Event>> Bot::pop_latest_events_async(const size_t count)
@@ -403,11 +492,25 @@ namespace mpp
         co_return parse_events(json["data"]);
     }
 
+    std::vector<Event> Bot::peek_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
+    }
+
     ex::task<std::vector<Event>> Bot::peek_events_async(const size_t count)
     {
         const auto json = get_checked_response_json(co_await net_client_.http_get_async(
             fmt::format("/peekMessage?sessionKey={}&count={}", sess_key_, count)));
         co_return parse_events(json["data"]);
+    }
+
+    std::vector<Event> Bot::peek_latest_events(const size_t count)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/peekLatestMessage?sessionKey={}&count={}", sess_key_, count)));
+        return parse_events(json["data"]);
     }
 
     ex::task<std::vector<Event>> Bot::peek_latest_events_async(const size_t count)
@@ -417,11 +520,25 @@ namespace mpp
         co_return parse_events(json["data"]);
     }
 
+    Event Bot::retrieve_message(const MessageId id)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/messageFromId?sessionKey={}&id={}", sess_key_, id.id)));
+        return Event::from_json(json["data"]);
+    }
+
     ex::task<Event> Bot::retrieve_message_async(const MessageId id)
     {
         const auto json = get_checked_response_json(co_await net_client_.http_get_async(
             fmt::format("/messageFromId?sessionKey={}&id={}", sess_key_, id.id)));
         co_return Event::from_json(json["data"]);
+    }
+
+    size_t Bot::count_message()
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/countMessage?sessionKey={}", sess_key_)));
+        return detail::from_json<size_t>(json["data"]);
     }
 
     ex::task<size_t> Bot::count_message_async()
@@ -431,11 +548,25 @@ namespace mpp
         co_return detail::from_json<size_t>(json["data"]);
     }
 
+    std::vector<Friend> Bot::list_friends()
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/friendList?sessionKey={}", sess_key_)));
+        return detail::from_json<std::vector<Friend>>(json);
+    }
+
     ex::task<std::vector<Friend>> Bot::list_friends_async()
     {
         const auto json = get_checked_response_json(co_await net_client_.http_get_async(
             fmt::format("/friendList?sessionKey={}", sess_key_)));
         co_return detail::from_json<std::vector<Friend>>(json);
+    }
+
+    std::vector<Group> Bot::list_groups()
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/groupList?sessionKey={}", sess_key_)));
+        return detail::from_json<std::vector<Group>>(json);
     }
 
     ex::task<std::vector<Group>> Bot::list_groups_async()
@@ -445,6 +576,13 @@ namespace mpp
         co_return detail::from_json<std::vector<Group>>(json);
     }
 
+    std::vector<Member> Bot::list_members(const GroupId id)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/memberList?sessionKey={}&target={}", sess_key_, id.id)));
+        return detail::from_json<std::vector<Member>>(json);
+    }
+
     ex::task<std::vector<Member>> Bot::list_members_async(const GroupId id)
     {
         const auto json = get_checked_response_json(co_await net_client_.http_get_async(
@@ -452,29 +590,34 @@ namespace mpp
         co_return detail::from_json<std::vector<Member>>(json);
     }
 
+    void Bot::mute(const GroupId group, const UserId user, const std::chrono::seconds duration)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/mute", mute_body(this, group, user, duration)));
+    }
+
     ex::task<void> Bot::mute_async(const GroupId group, const UserId user, std::chrono::seconds duration)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-            scope.add_entry("memberId", user.id);
-            scope.add_entry("time", duration.count());
-        });
-        (void)get_checked_response_json(co_await net_client_.http_post_json_async("/mute", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/mute", mute_body(this, group, user, duration)));
+    }
+
+    void Bot::unmute(const GroupId group, const UserId user)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/unmute", unmute_body(this, group, user)));
     }
 
     ex::task<void> Bot::unmute_async(const GroupId group, const UserId user)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-            scope.add_entry("memberId", user.id);
-        });
-        (void)get_checked_response_json(co_await net_client_.http_post_json_async("/unmute", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/unmute", unmute_body(this, group, user)));
+    }
+
+    void Bot::mute_all(const GroupId group)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/muteAll", target_id_body(this, group)));
     }
 
     ex::task<void> Bot::mute_all_async(const GroupId group)
@@ -483,23 +626,34 @@ namespace mpp
             "/muteAll", target_id_body(this, group)));
     }
 
+    void Bot::unmute_all(const GroupId group)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/unmuteAll", target_id_body(this, group)));
+    }
+
     ex::task<void> Bot::unmute_all_async(const GroupId group)
     {
         (void)get_checked_response_json(co_await net_client_.http_post_json_async(
             "/unmuteAll", target_id_body(this, group)));
     }
 
+    void Bot::kick(const GroupId group, const UserId user, const std::string_view reason)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/kick", kick_body(this, group, user, reason)));
+    }
+
     ex::task<void> Bot::kick_async(const GroupId group, const UserId user, const std::string_view reason)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-            scope.add_entry("memberId", user.id);
-            scope.add_entry("msg", reason);
-        });
-        (void)get_checked_response_json(co_await net_client_.http_post_json_async("/kick", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/kick", kick_body(this, group, user, reason)));
+    }
+
+    void Bot::quit(const GroupId group)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/quit", target_id_body(this, group)));
     }
 
     ex::task<void> Bot::quit_async(const GroupId group)
@@ -508,55 +662,53 @@ namespace mpp
             "/quit", target_id_body(this, group)));
     }
 
+    void Bot::respond(
+        const NewFriendRequestEvent& ev, const NewFriendResponseType type, const std::string_view reason)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/resp/newFriendRequestEvent", respond_body(this, ev, type, reason)));
+    }
+
+    void Bot::respond(
+        const MemberJoinRequestEvent& ev, const MemberJoinResponseType type, const std::string_view reason)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/resp/memberJoinRequestEvent", respond_body(this, ev, type, reason)));
+    }
+
+    void Bot::respond(
+        const BotInvitedJoinGroupRequestEvent& ev, const BotInvitedJoinGroupResponseType type, const std::string_view reason)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/resp/botInvitedJoinGroupRequestEvent", respond_body(this, ev, type, reason)));
+    }
+
     ex::task<void> Bot::respond_async(
         const NewFriendRequestEvent& ev, const NewFriendResponseType type, const std::string_view reason)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id.id);
-            scope.add_entry("groupId", ev.group_id.id);
-            scope.add_entry("operate", static_cast<uint64_t>(type));
-            scope.add_entry("message", reason);
-        });
-        (void)get_checked_response_json(
-            co_await net_client_.http_post_json_async("/resp/newFriendRequestEvent", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/resp/newFriendRequestEvent", respond_body(this, ev, type, reason)));
     }
 
     ex::task<void> Bot::respond_async(
         const MemberJoinRequestEvent& ev, const MemberJoinResponseType type, const std::string_view reason)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id.id);
-            scope.add_entry("groupId", ev.group_id.id);
-            scope.add_entry("operate", static_cast<uint64_t>(type));
-            scope.add_entry("message", reason);
-        });
-        (void)get_checked_response_json(
-            co_await net_client_.http_post_json_async("/resp/memberJoinRequestEvent", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/resp/memberJoinRequestEvent", respond_body(this, ev, type, reason)));
     }
 
     ex::task<void> Bot::respond_async(
         const BotInvitedJoinGroupRequestEvent& ev, const BotInvitedJoinGroupResponseType type, const std::string_view reason)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("eventId", ev.id);
-            scope.add_entry("fromId", ev.from_id.id);
-            scope.add_entry("groupId", ev.group_id.id);
-            scope.add_entry("operate", static_cast<uint64_t>(type));
-            scope.add_entry("message", reason);
-        });
-        (void)get_checked_response_json(
-            co_await net_client_.http_post_json_async("/resp/botInvitedJoinGroupRequestEvent", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/resp/botInvitedJoinGroupRequestEvent", respond_body(this, ev, type, reason)));
+    }
+
+    GroupConfig Bot::get_group_config(const GroupId group)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/groupConfig?sessionKey={}&target={}", sess_key_, group.id)));
+        return detail::from_json<GroupConfig>(json);
     }
 
     ex::task<GroupConfig> Bot::get_group_config_async(const GroupId group)
@@ -566,16 +718,23 @@ namespace mpp
         co_return detail::from_json<GroupConfig>(json);
     }
 
+    void Bot::config_group(const GroupId group, const GroupConfig& config)
+    {
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/groupConfig", config_group_body(this, group, config)));
+    }
+
     ex::task<void> Bot::config_group_async(const GroupId group, const GroupConfig& config)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-            scope.add_entry("config", config);
-        });
-        (void)get_checked_response_json(co_await net_client_.http_post_json_async("/groupConfig", std::move(body)));
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/groupConfig", config_group_body(this, group, config)));
+    }
+
+    MemberInfo Bot::get_member_info(GroupId group, UserId user)
+    {
+        const auto json = get_checked_response_json(net_client_.http_get(
+            fmt::format("/groupConfig?sessionKey={}&target={}&memberId={}", sess_key_, group.id, user.id)));
+        return detail::from_json<MemberInfo>(json);
     }
 
     ex::task<MemberInfo> Bot::get_member_info_async(const GroupId group, const UserId user)
@@ -585,20 +744,20 @@ namespace mpp
         co_return detail::from_json<MemberInfo>(json);
     }
 
-    ex::task<void> Bot::set_member_info_async(const GroupId group, const UserId user, const MemberInfo& info)
+    void Bot::set_member_info(const GroupId group, const UserId user, const MemberInfo& info)
     {
-        auto body = detail::perform_format([&](fmt::format_context& ctx)
-        {
-            detail::JsonObjScope scope(ctx);
-            scope.add_entry("sessionKey", sess_key_);
-            scope.add_entry("target", group.id);
-            scope.add_entry("memberId", user.id);
-            scope.add_entry("info", info);
-        });
-        (void)get_checked_response_json(co_await net_client_.http_post_json_async("/memberInfo", std::move(body)));
+        (void)get_checked_response_json(net_client_.http_post_json(
+            "/memberInfo", set_member_info_body(this, group, user, info)));
     }
 
-    void Bot::monitor_events(const clu::function_ref<bool(const Event&)> callback)
+    ex::task<void> Bot::set_member_info_async(const GroupId group, const UserId user, const MemberInfo& info)
+    {
+        (void)get_checked_response_json(co_await net_client_.http_post_json_async(
+            "/memberInfo", set_member_info_body(this, group, user, info)));
+    }
+
+    void Bot::monitor_events(const clu::function_ref<bool(const Event&)> callback,
+        const clu::function_ref<void()> exception_handler)
     {
         net::WebsocketSession ws = net_client_.new_websocket_session();
         net_client_.connect_websocket(ws, fmt::format("/all?sessionKey={}", sess_key_));
@@ -610,27 +769,27 @@ namespace mpp
             {
                 auto json = parser.parse(ws.read());
                 check_json(json);
-                if (callback(parse_event(json.value()))) break;
+                if (!callback(parse_event(json.value()))) break;
             }
-            catch (...) { log_exception(); }
+            catch (...) { exception_handler(); }
         }
     }
 
-    ex::task<void> Bot::monitor_events_async(const clu::function_ref<ex::task<bool>(const Event&)> callback)
+    ex::task<void> Bot::monitor_events_async(const clu::function_ref<ex::task<bool>(const Event&)> callback,
+        const clu::function_ref<void()> exception_handler)
     {
         net::WebsocketSession ws = net_client_.new_websocket_session();
         co_await net_client_.connect_websocket_async(ws, fmt::format("/all?sessionKey={}", sess_key_));
 
-        std::atomic_bool close{ false };
-        ex::inline_scheduler sch;
+        std::atomic_bool go_on{ true };
         ex::async_scope scope;
 
-        while (!close.load(std::memory_order_acquire))
+        while (go_on.load(std::memory_order_acquire))
         {
             try
             {
                 auto json = parser.parse(co_await ws.read_async());
-                if (close.load(std::memory_order_acquire)) break;
+                if (!go_on.load(std::memory_order_acquire)) break;
                 check_json(json);
                 scope.spawn([&](const Event ev) -> ex::task<void>
                 {
@@ -638,16 +797,16 @@ namespace mpp
                     {
                         // if (co_await pm_queue_.match_event_async(ev)) co_return;
                         const bool result = co_await callback(ev);
-                        close.store(result, std::memory_order_release);
+                        go_on.store(result, std::memory_order_release);
+                        if (!result) co_await ws.close_async(); // Closing this also cancels the current awaiter
                     }
-                    catch (...) { log_exception(); }
-                }(parse_event(json.value())), sch);
+                    catch (...) { exception_handler(); }
+                }(parse_event(json.value())), get_scheduler());
             }
-            catch (...) { log_exception(); }
+            catch (...) { exception_handler(); }
         }
 
-        co_await ex::on(scope.cleanup(), sch);
-        co_await ws.close_async();
+        co_await ex::on(scope.cleanup(), get_scheduler());
     }
 
     SessionConfig Bot::get_config()
@@ -683,8 +842,7 @@ namespace mpp
 
         Bot bot(host, port);
         ex::async_scope scope;
-        ex::inline_scheduler scheduler;
-        scope.spawn(task(bot), scheduler);
+        scope.spawn(task(bot), bot.get_scheduler());
         bot.run();
 
         std::vector<std::jthread> threads;
