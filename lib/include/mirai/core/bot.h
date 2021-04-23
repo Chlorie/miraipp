@@ -2,8 +2,18 @@
 
 #include <filesystem>
 #include <span>
+
 #include <clu/function_ref.h>
 #include <clu/optional_ref.h>
+
+#include <unifex/when_all.hpp>
+#include <unifex/sequence.hpp>
+#include <unifex/with_query_value.hpp>
+#include <unifex/inplace_stop_token.hpp>
+#include <unifex/transform.hpp>
+#include <unifex/transform_done.hpp>
+#include <unifex/just.hpp>
+#include <unifex/stop_when.hpp>
 
 #include "common.h"
 #include "info_types.h"
@@ -11,8 +21,12 @@
 #include "exceptions.h"
 #include "net_client.h"
 #include "../message/segment_types_fwd.h"
+#include "../event/event_base.h"
 #include "../event/event_types_fwd.h"
-// #include "../pattern/pattern_matcher_queue.h"
+
+#include "../detail/ex_utils.h"
+#include "../detail/filter/filter_queue.h"
+#include "../detail/filter/next_event.h"
 
 namespace mpp
 {
@@ -31,11 +45,24 @@ namespace mpp
         net::Client net_client_;
         UserId bot_id_;
         std::string sess_key_;
-        // PatternMatcherQueue pm_queue_;
+        detail::FilterQueue queue_;
 
         std::string check_auth_gen_body(std::string_view auth_key) const;
         Event parse_event(detail::JsonElem json);
         std::vector<Event> parse_events(detail::JsonElem json);
+
+        template <typename T>
+        ex::task<std::optional<T>> timeout_as_optional(
+            ex::task<T> task, const Clock::time_point deadline)
+        {
+            using opt = std::optional<T>;
+            co_return co_await (
+                std::move(task)
+                | ex::stop_when(wait_async(deadline))
+                | ex::transform([](T&& value) { return opt(std::move(value)); })
+                | ex::transform_done([] { return ex::just(opt()); })
+            );
+        }
 
     public:
         /// \defgroup BotSpecial
@@ -45,7 +72,8 @@ namespace mpp
          * \param host 要连接到端点的主机，默认为 127.0.0.1
          * \param port 要连接到端点的端口，默认为 8080
          */
-        explicit Bot(const std::string_view host = "127.0.0.1", const std::string_view port = "8080"): net_client_(host, port) {}
+        explicit Bot(const std::string_view host = "127.0.0.1", const std::string_view port = "8080"):
+            net_client_(host, port), queue_(get_scheduler()) {}
         ~Bot() noexcept; ///< 销毁当前 bot 对象，释放未结束的会话并关闭所有连接
         /// \}
 
@@ -221,17 +249,18 @@ namespace mpp
         void monitor_events(clu::function_ref<bool(const Event&)> callback,
             clu::function_ref<void()> exception_handler = log_exception);
 
+        // TODO: should be an on/off thing instead of this?
         /**
          * \brief 异步地启动 Websocket 会话，监听所有种类的事件
          * \param callback 接收到消息时需要调用的函数
          * \param exception_handler callback 抛出未处理的异常时调用的函数，默认为 log_exception
          * \remark \rst
-         * 回调函数的函数原型须为 ``ex::task<bool> callback(const Event&)``，
+         * 回调函数的函数原型须为 ``ex::task<void> callback(const Event&)``，
          * 当某次调用回调函数返回 ``false`` 时，WebSocket 会话会被关闭，所有正在进行的回调函数会被尝试取消。
          * 异常处理函数原型须为 ``void exception_handler()``。
          * \endrst
          */
-        ex::task<void> monitor_events_async(clu::function_ref<ex::task<bool>(const Event&)> callback,
+        ex::task<void> monitor_events_async(clu::function_ref<ex::task<void>(const Event&)> callback,
             clu::function_ref<void()> exception_handler = log_exception);
         /// \}
 
@@ -240,31 +269,46 @@ namespace mpp
 
         void config(SessionConfig config);
         ex::task<void> config_async(SessionConfig config);
-        
-        // Pattern matcher queue needs a major revamp
 
-        // template <ConcreteEvent E, PatternFor<E>... Ps>
-        // ex::task<E> match_async(Ps&&... patterns)
-        // {
-        //     co_return *co_await pm_queue_.enqueue_async<E>(std::forward<Ps>(patterns)...);
-        // }
-        // 
-        // template <ConcreteEvent E, PatternFor<E>... Ps>
-        // ex::task<std::optional<E>> match_async(const Clock::time_point deadline, Ps&&... patterns)
-        // {
-        //     if (const auto res = co_await clu::race(
-        //             pm_queue_.enqueue_async<E>(std::forward<Ps>(patterns)...),
-        //             wait_async(deadline));
-        //         res.index() == 0)
-        //         co_return *clu::get<0>(res);
-        //     co_return std::nullopt;
-        // }
-        // 
-        // template <ConcreteEvent E, PatternFor<E>... Ps>
-        // ex::task<std::optional<E>> match_async(const Clock::duration timeout, Ps&&... patterns)
-        // {
-        //     return match_async<E>(Clock::now() + timeout, std::forward<Ps>(patterns)...);
-        // }
+        template <ConcreteEvent E>
+        ex::task<E> next_event_async() { return next_event_async<E>(detail::true_predicate); }
+
+        template <ConcreteEvent E, std::predicate<const E&> F>
+        ex::task<E> next_event_async(const F& filter)
+        {
+            detail::NextEventNode<E, F> node(queue_, filter);
+            const auto callback = detail::make_stop_callback(
+                co_await ex::get_stop_token(), [&] { node.request_cancel(); });
+            co_return co_await node.wait();
+        }
+
+        template <ConcreteEvent E>
+        ex::task<std::optional<E>> next_event_async(const Clock::time_point tp)
+        {
+            return timeout_as_optional<E>(
+                next_event_async<E>(), tp);
+        }
+
+        template <ConcreteEvent E, std::predicate<const E&> F>
+        ex::task<std::optional<E>> next_event_async(const Clock::time_point tp, const F& filter)
+        {
+            return timeout_as_optional<E>(
+                next_event_async<E>(filter), tp);
+        }
+
+        template <ConcreteEvent E>
+        ex::task<std::optional<E>> next_event_async(const Clock::duration dur)
+        {
+            return timeout_as_optional<E>(
+                next_event_async<E>(), Clock::now() + dur);
+        }
+
+        template <ConcreteEvent E, std::predicate<const E&> F>
+        ex::task<std::optional<E>> next_event_async(const Clock::duration dur, const F& filter)
+        {
+            return timeout_as_optional<E>(
+                next_event_async<E>(filter), Clock::now() + dur);
+        }
 
         /// \defgroup BotAsyncWait
         /// \{
@@ -283,7 +327,8 @@ namespace mpp
 
         void run() { net_client_.run(); } ///< 阻塞当前线程执行 I/O，直到所有 I/O 处理完成，可从多个线程调用
         boost::asio::io_context& io_context() { return net_client_.io_context(); } ///< 返回 bot 内使用的 asio::io_context
-        auto get_scheduler() { return net::Client::Scheduler(net_client_); } ///< 获取一个可供调度任务的计时调度器（TimedScheduler）
+        /// 获取一个可供调度任务的计时调度器（TimedScheduler）
+        net::Client::Scheduler get_scheduler() { return net::Client::Scheduler(net_client_); }
     };
     MPP_RESTORE_EXPORT_WARNING
 

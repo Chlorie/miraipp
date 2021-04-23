@@ -19,6 +19,8 @@ namespace mpp
         std::string name;
         std::string remark;
 
+        [[nodiscard]] bool operator==(const Friend& other) const noexcept { return id == other.id; }
+
         static Friend from_json(detail::JsonElem json);
     };
 

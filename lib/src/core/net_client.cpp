@@ -17,6 +17,7 @@
 #include <unifex/just.hpp>
 
 #include "mirai/core/exceptions.h"
+#include "mirai/detail/ex_utils.h"
 
 namespace mpp::net
 {
@@ -51,7 +52,7 @@ namespace mpp::net
 
             void await_suspend(const std::coroutine_handle<> hdl)
             {
-                co_spawn(ctx_, std::move(awt_), [&, hdl](const std::exception_ptr eptr, T value)
+                co_spawn(ctx_, std::move(awt_), [&, hdl](const std::exception_ptr& eptr, T value)
                 {
                     if (eptr)
                         result_ = eptr;
@@ -84,7 +85,7 @@ namespace mpp::net
 
             void await_suspend(const std::coroutine_handle<> hdl)
             {
-                co_spawn(ctx_, std::move(awt_), [&, hdl](const std::exception_ptr eptr)
+                co_spawn(ctx_, std::move(awt_), [&, hdl](const std::exception_ptr& eptr)
                 {
                     if (eptr) eptr_ = eptr;
                     hdl.resume();
@@ -98,181 +99,93 @@ namespace mpp::net
             }
         };
 
-        class ScheduleSender final
+        // ReSharper disable CppDeclaratorNeverUsed
+        class ScheduleAwaiter final
         {
-        public:
-            template <
-                template <typename...> typename Var,
-                template <typename...> typename Tup>
-            using value_types = Var<Tup<>>;
-
-            template <template <typename...> typename Var>
-            using error_types = Var<std::exception_ptr>;
-
-            static constexpr bool sends_done = false;
-
-            template <typename Recv>
-            class Operation final
-            {
-            private:
-                asio::io_context& ctx_;
-                Recv recv_;
-
-                Recv&& receiver() { return static_cast<Recv&&>(recv_); }
-
-            public:
-                Operation(asio::io_context& ctx, Recv&& recv):
-                    ctx_(ctx), recv_(static_cast<Recv&&>(recv)) {}
-
-                void start() & noexcept
-                {
-                    try { asio::post(ctx_, [this] { ex::set_done(receiver()); }); }
-                    catch (...) { ex::set_error(receiver(), std::current_exception()); }
-                }
-            };
-
         private:
             asio::io_context& ctx_;
 
         public:
-            explicit ScheduleSender(asio::io_context& ctx): ctx_(ctx) {}
+            explicit ScheduleAwaiter(asio::io_context& ctx): ctx_(ctx) {}
 
-            template <ex::receiver Recv>
-            Operation<Recv> connect(Recv&& recv) noexcept { return { ctx_, static_cast<Recv&&>(recv) }; }
+            bool await_ready() const noexcept { return false; }
+            void await_suspend(const std::coroutine_handle<> handle) const { post(ctx_, [handle] { handle.resume(); }); }
+            void await_resume() const noexcept {}
         };
 
-        class WaitUntilSender final
+        class WaitUntilAwaiter final
         {
-        public:
-            template <
-                template <typename...> typename Var,
-                template <typename...> typename Tup>
-            using value_types = Var<Tup<>>;
-
-            template <template <typename...> typename Var>
-            using error_types = Var<std::exception_ptr>;
-
-            static constexpr bool sends_done = true;
-
-            template <typename Recv>
-            class Operation final
-            {
-            private:
-                struct Stopper final
-                {
-                    WaitUntilSender& sender;
-                    void operator()() const
-                    {
-                        asio::execution::execute(sender.strand_,
-                            [&t = sender.timer_]() { t.cancel(); });
-                    }
-                };
-
-                using Callback = typename ex::stop_token_type_t<Recv&>::template callback_type<Stopper>;
-
-                WaitUntilSender& send_;
-                Recv recv_;
-                std::optional<Callback> cb_;
-
-                Recv&& receiver() { return static_cast<Recv&&>(recv_); }
-
-            public:
-                Operation(WaitUntilSender& send, Recv&& recv):
-                    send_(send), recv_(static_cast<Recv&&>(recv)) {}
-
-                void start() & noexcept
-                {
-                    try
-                    {
-                        cb_.emplace(ex::get_stop_token(recv_), Stopper{ send_ });
-                        send_.timer_.async_wait(asio::bind_executor(send_.strand_,
-                            [this](const sys::error_code ec)
-                            {
-                                if (ec == asio::error::operation_aborted)
-                                    ex::set_done(receiver());
-                                else if (ec)
-                                    ex::set_error(receiver(), std::make_exception_ptr(std::system_error(ec)));
-                                else
-                                    ex::set_value(receiver());
-                            }));
-                    }
-                    catch (...) { ex::set_error(receiver(), std::current_exception()); }
-                }
-            };
-
         private:
             asio::strand<asio::io_context::executor_type> strand_;
             asio::steady_timer timer_;
+            error_code ec_;
 
         public:
-            WaitUntilSender(asio::io_context& ctx, const TimePoint tp):
+            WaitUntilAwaiter(asio::io_context& ctx, const TimePoint tp):
                 strand_(make_strand(ctx)), timer_(ctx, tp) {}
 
-            template <ex::receiver Recv>
-            Operation<Recv> connect(Recv&& recv) noexcept { return { *this, static_cast<Recv&&>(recv) }; }
+            bool await_ready() const noexcept { return false; }
+
+            void await_suspend(const std::coroutine_handle<> handle)
+            {
+                timer_.async_wait(bind_executor(strand_,
+                    [this, handle](const sys::error_code ec)
+                    {
+                        ec_ = ec;
+                        handle.resume();
+                    }));
+            }
+
+            void await_resume() const
+            {
+                if (ec_ && ec_ != asio::error::operation_aborted)
+                    throw std::system_error(ec_);
+            }
+
+            void cancel()
+            {
+                asio::execution::execute(strand_,
+                    [this] { timer_.cancel(); });
+            }
         };
 
-        class WebSocketReadSender final
+        class WebsocketReadAwaiter final
         {
-        public:
-            template <
-                template <typename...> typename Var,
-                template <typename...> typename Tup>
-            using value_types = Var<Tup<std::string>>;
-
-            template <template <typename...> typename Var>
-            using error_types = Var<std::exception_ptr>;
-
-            static constexpr bool sends_done = true;
-
-            template <typename Recv>
-            class Operation final
-            {
-            private:
-                WebSocketReadSender& send_;
-                Recv recv_;
-
-                Recv&& receiver() { return static_cast<Recv&&>(recv_); }
-
-            public:
-                Operation(WebSocketReadSender& send, Recv&& recv):
-                    send_(send), recv_(static_cast<Recv&&>(recv)) {}
-
-                void start() & noexcept
-                {
-                    try
-                    {
-                        send_.stream_.async_read(send_.buffer_, [this](const error_code& ec, size_t)
-                        {
-                            if (ec == ws::error::closed || ec == sys::errc::operation_canceled)
-                                ex::set_done(receiver());
-                            else if (ec)
-                                ex::set_error(receiver(), std::make_exception_ptr(std::system_error(ec)));
-                            else
-                            {
-                                beast::flat_buffer& buffer = send_.buffer_;
-                                const size_t size = buffer.size();
-                                std::string result(static_cast<const char*>(buffer.data().data()), size);
-                                buffer.consume(size);
-                                ex::set_value(receiver(), std::move(result));
-                            }
-                        });
-                    }
-                    catch (...) { ex::set_error(receiver(), std::current_exception()); }
-                }
-            };
-
         private:
             ws_stream& stream_;
             beast::flat_buffer& buffer_;
+            error_code ec_;
 
         public:
-            WebSocketReadSender(ws_stream& stream, beast::flat_buffer& buffer):
+            WebsocketReadAwaiter(ws_stream& stream, beast::flat_buffer& buffer):
                 stream_(stream), buffer_(buffer) {}
 
-            template <ex::receiver Recv>
-            Operation<Recv> connect(Recv&& recv) noexcept { return { *this, static_cast<Recv&&>(recv) }; }
+            bool await_ready() const noexcept { return false; }
+
+            void await_suspend(const std::coroutine_handle<> handle)
+            {
+                stream_.async_read(buffer_,
+                    [this, handle](const error_code& ec, size_t)
+                    {
+                        ec_ = ec;
+                        handle.resume();
+                    });
+            }
+
+            std::optional<std::string> await_resume() const
+            {
+                if (ec_ == ws::error::closed || ec_ == sys::errc::operation_canceled)
+                    return {};
+                else if (ec_)
+                    throw std::system_error(ec_);
+
+                const size_t size = buffer_.size();
+                std::string result(static_cast<const char*>(buffer_.data().data()), size);
+                buffer_.consume(size);
+                return std::move(result);
+            }
         };
+        // ReSharper restore CppDeclaratorNeverUsed
 
         auto to_beast_sv(const std::string_view sv) { return beast::string_view(sv.data(), sv.size()); }
 
@@ -374,8 +287,16 @@ namespace mpp::net
             return req;
         }
 
-        auto schedule() { return ScheduleSender(ctx_); }
-        auto wait_async(const TimePoint tp) { return WaitUntilSender(ctx_, tp); }
+        auto schedule() { return ScheduleAwaiter(ctx_); }
+
+        ex::task<void> wait_async(const TimePoint tp)
+        {
+            WaitUntilAwaiter awaiter(ctx_, tp);
+            const auto callback = detail::make_stop_callback(
+                co_await ex::get_stop_token(), [&] { awaiter.cancel(); });
+            co_await awaiter;
+            co_await ex::stop_if_requested();
+        }
 
         void connect_websocket(ws_stream& stream, const std::string_view target)
         {
@@ -417,7 +338,14 @@ namespace mpp::net
             return std::move(result);
         }
 
-        WebSocketReadSender read_async() { return { stream_, buffer_ }; }
+        ex::task<std::string> read_async()
+        {
+            if (auto res = co_await WebsocketReadAwaiter(stream_, buffer_))
+                co_return std::move(*res);
+            else
+                co_await ex::stop();
+            std::terminate(); // unreachable
+        }
 
         void close() { stream_.close(ws::normal); }
 
@@ -438,8 +366,8 @@ namespace mpp::net
 
     // ReSharper disable CppMemberFunctionMayBeConst
     void Client::run() { io_context().run(); }
-    asio::io_context& Client::io_context() { return impl_->io_context(); }
-    std::string_view Client::host() const { return impl_->host(); }
+    asio::io_context& Client::io_context() noexcept { return impl_->io_context(); }
+    std::string_view Client::host() const noexcept { return impl_->host(); }
 
     std::string Client::http_get(const std::string_view target)
     {
@@ -481,7 +409,7 @@ namespace mpp::net
 
     ex::task<void> Client::schedule() { co_await impl_->schedule(); }
 
-    ex::task<void> Client::wait_async(const TimePoint tp) { co_await impl_->wait_async(tp); }
+    ex::task<void> Client::wait_async(const TimePoint tp) { return impl_->wait_async(tp); }
 
     WebsocketSession Client::new_websocket_session() { return WebsocketSession(io_context()); }
 
@@ -503,7 +431,7 @@ namespace mpp::net
     WebsocketSession& WebsocketSession::operator=(WebsocketSession&&) noexcept = default;
 
     std::string WebsocketSession::read() { return impl_->read(); }
-    ex::task<std::string> WebsocketSession::read_async() { co_return co_await impl_->read_async(); }
+    ex::task<std::string> WebsocketSession::read_async() { return impl_->read_async(); }
     void WebsocketSession::close() { return impl_->close(); }
     ex::task<void> WebsocketSession::close_async() { return impl_->close_async(); }
     // ReSharper restore CppMemberFunctionMayBeConst

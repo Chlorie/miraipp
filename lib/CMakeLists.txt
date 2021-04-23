@@ -28,7 +28,10 @@ add_headers(HEADERS
     "core/format.h"
     "core/info_types.h"
     "core/net_client.h"
+    "detail/ex_utils.h"
     "detail/json_fwd.h"
+    "detail/filter/filter_queue.h"
+    "detail/filter/next_event.h"
     "event/event.h"
     "event/event_base.h"
     "event/event_bases.h"
@@ -40,9 +43,6 @@ add_headers(HEADERS
     "message/segment_types.h"
     "message/segment_types_fwd.h"
     "message/sent_message.h"
-    "pattern/pattern.h"
-    "pattern/pattern_matcher_queue.h"
-    "pattern/pattern_types.h"
 )
 add_sources(SOURCES
     "core/bot.cpp"
@@ -53,6 +53,7 @@ add_sources(SOURCES
     "detail/json.h"
     "detail/multipart_builder.h"
     "detail/multipart_builder.cpp"
+    "detail/filter/filter_queue.cpp"
     "event/event.cpp"
     "event/event_bases.cpp"
     "event/event_types.cpp"
@@ -61,7 +62,6 @@ add_sources(SOURCES
     "message/segment.cpp"
     "message/segment_types.cpp"
     "message/sent_message.cpp"
-    "pattern/pattern_matcher_queue.cpp"
 )
 
 find_package(clu CONFIG REQUIRED)

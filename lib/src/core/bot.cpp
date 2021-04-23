@@ -6,6 +6,8 @@
 #include <unifex/async_scope.hpp>
 #include <unifex/inline_scheduler.hpp>
 #include <unifex/on.hpp>
+#include <unifex/finally.hpp>
+#include <unifex/sync_wait.hpp>
 
 #include "mirai/core/exceptions.h"
 #include "mirai/message/message.h"
@@ -756,7 +758,8 @@ namespace mpp
             "/memberInfo", set_member_info_body(this, group, user, info)));
     }
 
-    void Bot::monitor_events(const clu::function_ref<bool(const Event&)> callback,
+    void Bot::monitor_events(
+        const clu::function_ref<bool(const Event&)> callback,
         const clu::function_ref<void()> exception_handler)
     {
         net::WebsocketSession ws = net_client_.new_websocket_session();
@@ -775,38 +778,52 @@ namespace mpp
         }
     }
 
-    ex::task<void> Bot::monitor_events_async(const clu::function_ref<ex::task<bool>(const Event&)> callback,
+    ex::task<void> Bot::monitor_events_async(
+        const clu::function_ref<ex::task<void>(const Event&)> callback,
         const clu::function_ref<void()> exception_handler)
     {
+        const auto stop_token = co_await ex::get_stop_token();
         net::WebsocketSession ws = net_client_.new_websocket_session();
         co_await net_client_.connect_websocket_async(ws, fmt::format("/all?sessionKey={}", sess_key_));
 
-        std::atomic_bool go_on{ true };
         ex::async_scope scope;
+        const auto stop_callback = detail::make_stop_callback(stop_token,
+            [&] { scope.spawn(ws.close_async(), get_scheduler()); });
 
-        while (go_on.load(std::memory_order_acquire))
+        const auto work = [&]() -> ex::task<void>
         {
-            try
+            while (true)
             {
-                auto json = parser.parse(co_await ws.read_async());
-                if (!go_on.load(std::memory_order_acquire)) break;
-                check_json(json);
-                scope.spawn([&](const Event ev) -> ex::task<void>
+                try
                 {
-                    try
+                    auto json = parser.parse(co_await ws.read_async());
+                    check_json(json);
+                    scope.spawn([&](Event ev) -> ex::task<void>
                     {
-                        // if (co_await pm_queue_.match_event_async(ev)) co_return;
-                        const bool result = co_await callback(ev);
-                        go_on.store(result, std::memory_order_release);
-                        if (!result) co_await ws.close_async(); // Closing this also cancels the current awaiter
-                    }
-                    catch (...) { exception_handler(); }
-                }(parse_event(json.value())), get_scheduler());
+                        try
+                        {
+                            if (co_await queue_.filter_event(ev)) co_return;
+                            co_await (
+                                callback(ev)
+                                | ex::transform_done([&] { return ws.close_async(); })
+                            );
+                        }
+                        catch (...) { exception_handler(); }
+                    }(parse_event(json.value())), get_scheduler());
+                }
+                catch (...) { exception_handler(); }
             }
-            catch (...) { exception_handler(); }
-        }
+        };
 
-        co_await ex::on(scope.cleanup(), get_scheduler());
+        co_await (
+            work()
+            | ex::finally(
+                ex::sequence(scope.cleanup(), queue_.cleanup())
+                | ex::on(get_scheduler()))
+            | ex::transform_done([] { return ex::just(); })
+        );
+
+        if (stop_token.stop_requested()) co_await ex::stop();
     }
 
     SessionConfig Bot::get_config()
@@ -843,11 +860,16 @@ namespace mpp
         Bot bot(host, port);
         ex::async_scope scope;
         scope.spawn(task(bot), bot.get_scheduler());
-        bot.run();
 
         std::vector<std::jthread> threads;
         threads.reserve(thread_count - 1);
         for (size_t i = 1; i < thread_count; i++)
             threads.emplace_back([&] { bot.run(); });
+        bot.run();
+
+        ex::inline_scheduler sch;
+        scope.cleanup()
+            | ex::on(sch)
+            | ex::sync_wait();
     }
 }

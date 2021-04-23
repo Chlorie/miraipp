@@ -40,6 +40,8 @@ namespace mpp::net
             ex::task<void> schedule_at(const TimePoint tp) const { return client_.wait_async(tp); }
             ex::task<void> schedule_after(const Duration dur) const { return client_.wait_async(now() + dur); }
 
+            boost::asio::io_context& io_context() const noexcept { return client_.io_context(); }
+
             [[nodiscard]] bool operator==(const Scheduler& other) const noexcept { return &client_ == &other.client_; }
         };
 
@@ -56,9 +58,9 @@ namespace mpp::net
         Client& operator=(Client&&) noexcept;
 
         void run();
-        boost::asio::io_context& io_context();
+        boost::asio::io_context& io_context() noexcept;
 
-        std::string_view host() const;
+        std::string_view host() const noexcept;
 
         std::string http_get(std::string_view target);
         ex::task<std::string> http_get_async(std::string_view target);
@@ -96,7 +98,7 @@ namespace mpp::net
         void close();
         ex::task<void> close_async();
 
-        Impl* pimpl_ptr() const { return impl_.get(); }
+        Impl* pimpl_ptr() const noexcept { return impl_.get(); }
     };
     MPP_RESTORE_EXPORT_WARNING
 }
